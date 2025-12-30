@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Home from "./pages/home/Home";
 import EmailSignup from "./pages/signup/EmailSignup";
 import VerifyOTP from "./pages/signup/VerifyOTP";
 import ChooseRole from "./pages/auth/ChooseRole";
@@ -11,6 +12,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Home Page */}
+        <Route path="/" element={<Home />} />
         {/* Signup flow */}
       <Route path="/signup/email" element={<EmailSignup />} />
       <Route path="/signup/verify" element={<VerifyOTP />} />
