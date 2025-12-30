@@ -50,7 +50,7 @@ const Header = () => {
 
         <div className="hidden md:flex gap-2">
           <Link
-            to="/signup"
+            to="/signup/email"
             className="bg-primary px-4 h-10 rounded-lg flex items-center text-white font-bold hover:bg-primary/90 transition-colors"
           >
             Sign Up

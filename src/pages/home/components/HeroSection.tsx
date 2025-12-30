@@ -14,7 +14,7 @@ const HeroSection = () => {
           Your Link to Trusted Local Pros.
         </h1>
         <p className="text-white max-w-2xl mx-auto">
-          Find and book top-rated local professionals for any home project.
+          Find and book top-rated local professionals.
         </p>
 
         <SearchBar />
