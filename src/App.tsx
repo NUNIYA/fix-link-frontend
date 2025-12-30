@@ -7,6 +7,7 @@ import CustomerRegister from "./pages/auth/customer/CustomerRegister";
 import ProfessionalRegister from "./pages/auth/professional/ProfessionalRegister";
 import CustomerHome from "./pages/auth/customer/CustomerHome";
 import ProfessionalHome from "./pages/auth/professional/ProfessionalHome"
+import LoginPage from "./pages/auth/login";
 
 function App() {
   return (
@@ -22,6 +23,8 @@ function App() {
       {/* Registration */}
       <Route path="/signup/customer" element={<CustomerRegister />} />
       <Route path="/signup/professional" element={<ProfessionalRegister />} />
+      {/* Login */}
+      <Route path="/login" element={<LoginPage />} />
 
       {/* Dashboards */}
       <Route path="/customer/home" element={<CustomerHome />} />
