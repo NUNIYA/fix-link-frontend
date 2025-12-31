@@ -25,7 +25,7 @@ const SearchBar: React.FC = () => {
           </span>
           <input
             type="text"
-            placeholder="Enter your zip code"
+            placeholder="Enter your Location"
             className="w-full h-14 pl-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-[#111518] dark:text-white focus:ring-primary focus:border-primary"
           />
         </div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const EmailSignup = () => {
   const [email, setEmail] = useState("");
@@ -47,9 +48,7 @@ const EmailSignup = () => {
 
                 <p className="text-sm text-center text-subtle-light pt-4">
                   Already have an account?{" "}
-                  <span className="text-primary underline cursor-pointer">
-                    Sign In
-                  </span>
+                 <Link to="/login" className="text-primary underline cursor-pointer">Sign In</Link>
                 </p>
               </div>
 
