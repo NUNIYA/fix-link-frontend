@@ -1,14 +1,26 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const ChooseRole = () => {
   const [role, setRole] = useState<"customer" | "professional">("customer");
+
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const email = (location.state as { email?: string })?.email;
+
+  // B) Guard against direct access
+  if (!email) {
+    navigate("/signup");
+    return null;
+  }
 
   const handleContinue = () => {
-    navigate(role === "customer"
-      ? "/signup/customer"
-      : "/signup/professional"
+    navigate(
+      role === "customer"
+        ? "/signup/customer"
+        : "/signup/professional",
+      { state: { email } }
     );
   };
 

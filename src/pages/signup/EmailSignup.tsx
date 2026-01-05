@@ -1,10 +1,41 @@
 import { useState } from "react";
+import ErrorMessage from "../../components/ErrorMessage";
+import LoadingSpinner from "../../components/LoadingSpinner";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 
 const EmailSignup = () => {
   const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
+
+  // Email validation helper
+  const isValidEmail = (email: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const handleContinue = async () => {
+    setError("");
+
+    if (!email) {
+      setError("Email is required");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    setLoading(true);
+
+    // Fake API call (simulate backend request)
+    setTimeout(() => {
+      setLoading(false);
+      navigate("/signup/verify", { state: { email } });
+    }, 1500);
+  };
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-light font-display">
@@ -16,6 +47,8 @@ const EmailSignup = () => {
 
           <div className="w-full max-w-4xl">
             <div className="flex flex-col rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.05)] bg-card-light md:flex-row">
+              
+              {/* Left section */}
               <div className="flex flex-col gap-4 p-6 sm:p-8 md:p-10 w-full">
                 <div className="flex flex-col gap-2">
                   <p className="text-2xl font-bold">
@@ -37,18 +70,25 @@ const EmailSignup = () => {
                   />
                 </label>
 
+                {/* Error message */}
+                {error && <ErrorMessage message={error} />}
+
                 <button
-                  onClick={() =>
-                    navigate("/signup/verify", { state: { email } })
-                  }
-                  className="h-12 rounded-lg bg-primary text-white font-bold hover:opacity-90"
+                  onClick={handleContinue}
+                  disabled={loading}
+                  className="h-12 rounded-lg bg-primary text-white font-bold hover:opacity-90 disabled:opacity-60"
                 >
-                  Continue
+                  {loading ? <LoadingSpinner /> : "Continue"}
                 </button>
 
                 <p className="text-sm text-center text-subtle-light pt-4">
                   Already have an account?{" "}
-                 <Link to="/login" className="text-primary underline cursor-pointer">Sign In</Link>
+                  <Link
+                    to="/login"
+                    className="text-primary underline cursor-pointer"
+                  >
+                    Sign In
+                  </Link>
                 </p>
               </div>
 
@@ -62,6 +102,7 @@ const EmailSignup = () => {
                   }}
                 />
               </div>
+
             </div>
           </div>
         </div>
