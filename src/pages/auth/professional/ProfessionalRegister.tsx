@@ -1,15 +1,210 @@
-import React from "react";
+import React, { useState, type ChangeEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { registerUser } from "../../../api/auth.api";
+import ErrorMessage from "../../../components/ErrorMessage";
+import LoadingSpinner from "../../../components/LoadingSpinner";
+import SuccessMessage from "../../../components/SuccessMessage";
+import LocationInput from "../../../components/LocationInput";
 
 const ProfessionalRegister = () => {
-  const handleSubmit = (e: React.FormEvent) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get email from router state
+  const email = (location.state as { email?: string })?.email;
+
+  // Guard against direct access
+  if (!email) {
+    navigate("/signup");
+    return null;
+  }
+
+  const [form, setForm] = useState({
+    fullName: "",
+    phone: "",
+    gender: "",
+    dateOfBirth: "",
+    city: "",
+    subcity: "",
+    houseNumber: "",
+    serviceCategory: "",
+    yearsOfExperience: "",
+    skills: "",
+    shortBio: "",
+    payoutMethod: "",
+    accountNumber: "",
+    password: "",
+    confirmPassword: "",
+    location: "",
+    paymentType: "perHour",
+    hourlyRate: "",
+    packages: [] as { title: string; price: string }[],
+  });
+
+  // File states
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [nationalIdFront, setNationalIdFront] = useState<File | null>(null);
+  const [nationalIdBack, setNationalIdBack] = useState<File | null>(null);
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [selfPicture, setSelfPicture] = useState<File | null>(null);
+  const [finNumber, setFinNumber] = useState("");
+
+  // UI states
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Handle input changes
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const target = e.target;
+    if (target instanceof HTMLInputElement) {
+      const { name, value, type, files } = target;
+      if (type === "file" && files && files.length > 0) {
+        switch (name) {
+          case "profilePhoto":
+            setProfilePhoto(files[0]);
+            break;
+          case "nationalIdFront":
+            setNationalIdFront(files[0]);
+            break;
+          case "nationalIdBack":
+            setNationalIdBack(files[0]);
+            break;
+          case "cvFile":
+            setCvFile(files[0]);
+            break;
+          case "selfPicture":
+            setSelfPicture(files[0]);
+            break;
+        }
+      } else {
+        setForm({ ...form, [name]: value });
+      }
+    } else if (target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) {
+      const { name, value } = target;
+      setForm({ ...form, [name]: value });
+    }
+  };
+
+  // Location using GPS or LocationInput
+  const handleUseGPS = () => {
+    if (!navigator.geolocation) return alert("Geolocation is not supported");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords = `${position.coords.latitude}, ${position.coords.longitude}`;
+        setForm({ ...form, location: coords });
+      },
+      () => alert("Unable to get your location")
+    );
+  };
+
+  // Package helpers
+  const addPackage = () => {
+    setForm({ ...form, packages: [...form.packages, { title: "", price: "" }] });
+  };
+
+  const removePackage = (index: number) => {
+    const updated = form.packages.filter((_, i) => i !== index);
+    setForm({ ...form, packages: updated });
+  };
+
+  const updatePackage = (index: number, field: "title" | "price", value: string) => {
+    const updated = form.packages.map((pkg, i) =>
+      i === index ? { ...pkg, [field]: value } : pkg
+    );
+    setForm({ ...form, packages: updated });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle submission later
-    console.log("Form submitted");
+    setError(null);
+
+    // Required fields
+    const requiredFields = [
+      "fullName",
+      "phone",
+      "gender",
+      "dateOfBirth",
+      "city",
+      "subcity",
+      "serviceCategory",
+      "yearsOfExperience",
+      "shortBio",
+      "password",
+      "confirmPassword",
+      "location",
+      "payoutMethod",
+      "accountNumber",
+    ];
+
+    for (const field of requiredFields) {
+      if (!form[field as keyof typeof form]) {
+        setError("Please fill all required fields");
+        return;
+      }
+    }
+
+    // Payment validation
+    if (form.paymentType === "perHour") {
+      if (!form.hourlyRate) {
+        setError("Please enter your hourly rate");
+        return;
+      }
+    } else {
+      if (form.packages.length === 0) {
+        setError("Please add at least one package");
+        return;
+      }
+      for (const pkg of form.packages) {
+        if (!pkg.title || !pkg.price) {
+          setError("All package descriptions and prices are required");
+          return;
+        }
+      }
+    }
+
+    if (!profilePhoto || !nationalIdFront || !nationalIdBack || !cvFile || !selfPicture || !finNumber) {
+      setError("All verification documents are required");
+      return;
+    }
+
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    const bioWordCount = form.shortBio.trim().split(/\s+/).length;
+    if (bioWordCount > 150) {
+      setError("Short Bio cannot exceed 150 words");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await registerUser("professional", {
+        ...form,
+        email,
+        finNumber,
+      });
+      setSuccess(response.message);
+      setTimeout(() => {
+        navigate("/signup/pending-approval");
+      }, 1500);
+    } catch (err: any) {
+      setError(err.message || "Submission failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
-      {/* Header */}
       <header className="h-20 w-full px-4 sm:px-8 md:px-12 flex items-center">
         <a
           href="#"
@@ -25,7 +220,6 @@ const ProfessionalRegister = () => {
         </a>
       </header>
 
-      {/* Main Form */}
       <main className="flex-grow flex items-center justify-center py-12 px-4">
         <form
           onSubmit={handleSubmit}
@@ -33,123 +227,170 @@ const ProfessionalRegister = () => {
         >
           {/* Title */}
           <div className="text-center space-y-2 mb-8">
-            <h1 className="text-4xl font-black text-[#111518] dark:text-white">
-              Create Your Professional Account
-            </h1>
+            <h1 className="text-4xl font-black">Create Your Professional Account</h1>
             <p className="text-[#60798a] dark:text-gray-400">
               Provide accurate details to get verified and start receiving jobs.
             </p>
           </div>
 
-          {/* A. Personal Information */}
+          {/* Personal Info */}
           <section className="space-y-6">
-            <h2 className="text-xl font-bold border-b pb-3 border-[#dbe1e6] dark:border-gray-700">
-              A. Personal Information
-            </h2>
+            <h2 className="text-xl font-bold border-b pb-3">A. Personal Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Full Name
-                </span>
-                <input type="text" className="form-input h-12" />
-              </label>
-              <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Email
-                </span>
-                <input type="email" className="form-input h-12" />
-              </label>
-              <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Phone Number
-                </span>
-                <input type="tel" className="form-input h-12" />
-              </label>
-              <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Profile Photo
-                </span>
+                <span className="font-medium pb-1">Full Name *</span>
                 <input
-                  type="file"
-                  className="form-input file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary dark:file:bg-primary/20 dark:file:text-white hover:file:bg-primary/20"
+                  type="text"
+                  name="fullName"
+                  value={form.fullName}
+                  onChange={handleChange}
+                  className="form-input h-12"
+                  required
                 />
               </label>
+
+              {/* Email */}
               <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Password
-                </span>
-                <input type="password" className="form-input h-12" />
+                <span className="font-medium pb-1">Email</span>
+                <input value={email} disabled className="form-input h-12 bg-gray-100 text-gray-500" />
               </label>
+
               <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Confirm Password
-                </span>
-                <input type="password" className="form-input h-12" />
+                <span className="font-medium pb-1">Phone Number *</span>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  className="form-input h-12"
+                  required
+                />
               </label>
+
               <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Gender (Optional)
-                </span>
-                <select className="form-select h-12">
-                  <option>Select...</option>
+                <span className="font-medium pb-1">Profile Photo *</span>
+                <input type="file" name="profilePhoto" onChange={handleChange} className="form-input" required />
+              </label>
+
+              <label className="flex flex-col relative">
+                <span className="font-medium pb-1">Password *</span>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  className="form-input h-12 pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-10 text-gray-400"
+                >
+                  <span className="material-symbols-outlined">
+                    {showPassword ? "visibility_off" : "visibility"}
+                  </span>
+                </button>
+              </label>
+
+              <label className="flex flex-col relative">
+                <span className="font-medium pb-1">Confirm Password *</span>
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  className="form-input h-12 pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-2 top-10 text-gray-400"
+                >
+                  <span className="material-symbols-outlined">
+                    {showConfirmPassword ? "visibility_off" : "visibility"}
+                  </span>
+                </button>
+              </label>
+
+              <label className="flex flex-col">
+                <span className="font-medium pb-1">Gender *</span>
+                <select
+                  name="gender"
+                  value={form.gender}
+                  onChange={handleChange}
+                  className="form-select h-12"
+                  required
+                >
+                  <option value="">Select</option>
                   <option>Male</option>
                   <option>Female</option>
-                  <option>Prefer not to say</option>
                 </select>
               </label>
+
               <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Date of Birth (Optional)
-                </span>
-                <input type="date" className="form-input h-12" />
+                <span className="font-medium pb-1">Date of Birth *</span>
+                <input
+                  type="date"
+                  name="dateOfBirth"
+                  value={form.dateOfBirth}
+                  onChange={handleChange}
+                  className="form-input h-12"
+                  required
+                />
               </label>
             </div>
 
             {/* Address */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  City
-                </span>
-                <input type="text" className="form-input h-12" />
+                <span className="font-medium pb-1">City *</span>
+                <input type="text" name="city" value={form.city} onChange={handleChange} className="form-input h-12" required />
               </label>
               <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Subcity
-                </span>
-                <input type="text" className="form-input h-12" />
+                <span className="font-medium pb-1">Subcity *</span>
+                <input type="text" name="subcity" value={form.subcity} onChange={handleChange} className="form-input h-12" required />
               </label>
               <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  House Number
-                </span>
-                <input type="text" className="form-input h-12" />
+                <span className="font-medium pb-1">House Number</span>
+                <input type="text" name="houseNumber" value={form.houseNumber} onChange={handleChange} className="form-input h-12" />
               </label>
             </div>
 
+            {/* Location */}
+            <label className="flex flex-col w-full">
+              <span className="text-base font-medium pb-2">Location *</span>
+              <LocationInput
+                value={form.location}
+                onSelect={(loc) => setForm({ ...form, location: loc })}
+              />
+            </label>
+
             <button
               type="button"
-              className="flex items-center gap-2 px-5 h-12 border rounded-lg bg-white dark:bg-gray-800 border-[#dbe1e6] dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+              onClick={handleUseGPS}
+              className="flex items-center gap-2 px-5 h-12 border rounded-lg bg-white dark:bg-gray-800 border-[#dbe1e6] dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 mt-2"
             >
-              <span className="material-symbols-outlined text-lg">
-                my_location
-              </span>
+              <span className="material-symbols-outlined text-lg">my_location</span>
               Use Current GPS Location
             </button>
           </section>
 
-          {/* B. Professional Details */}
+          {/* Professional Details */}
           <section className="space-y-6">
-            <h2 className="text-xl font-bold border-b pb-3 border-[#dbe1e6] dark:border-gray-700">
-              B. Professional Details
-            </h2>
+            <h2 className="text-xl font-bold border-b pb-3">B. Professional Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Service Category
-                </span>
-                <select className="form-select h-12">
-                  <option>Select a category</option>
+                <span className="font-medium pb-1">Service Category *</span>
+                <select
+                  name="serviceCategory"
+                  value={form.serviceCategory}
+                  onChange={handleChange}
+                  className="form-select h-12"
+                  required
+                >
+                  <option value="">Select a category</option>
                   <option>Plumbing</option>
                   <option>Electrical</option>
                   <option>Carpentry</option>
@@ -157,153 +398,203 @@ const ProfessionalRegister = () => {
                   <option>Cleaning</option>
                 </select>
               </label>
-
               <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Years of Experience
-                </span>
-                <input type="number" className="form-input h-12" />
-              </label>
-
-              <label className="flex flex-col md:col-span-2">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  List of Skills
-                </span>
+                <span className="font-medium pb-1">Years of Experience *</span>
                 <input
-                  type="text"
-                  placeholder="Pipe fitting, Drain cleaning"
+                  type="number"
+                  name="yearsOfExperience"
+                  value={form.yearsOfExperience}
+                  onChange={handleChange}
                   className="form-input h-12"
+                  required
                 />
               </label>
-
               <label className="flex flex-col md:col-span-2">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Short Bio / Description
-                </span>
-                <textarea className="form-textarea h-32" />
+                <span className="font-medium pb-1">List of Skills (optional, separate with commas)</span>
+                <input type="text" name="skills" value={form.skills} onChange={handleChange} className="form-input h-12" />
               </label>
-
               <label className="flex flex-col md:col-span-2">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Languages Spoken
-                </span>
-                <input
-                  type="text"
-                  placeholder="English, Amharic"
-                  className="form-input h-12"
+                <span className="font-medium pb-1">Short Bio *</span>
+                <textarea
+                  name="shortBio"
+                  value={form.shortBio}
+                  onChange={handleChange}
+                  className="form-textarea h-32"
+                  placeholder="Maximum 150 words"
+                  required
                 />
               </label>
             </div>
           </section>
 
-          {/* C. Verification Documents */}
-          <section className="space-y-6">
-            <h2 className="text-xl font-bold border-b pb-3 border-[#dbe1e6] dark:border-gray-700">
-              C. Verification Documents
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  National ID (Front)
-                </span>
-                <input type="file" className="form-input" />
+          {/* Payment */}
+          <section className="space-y-4">
+            <h2 className="text-xl font-bold border-b pb-3">E. Payment *</h2>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="paymentType"
+                  value="perHour"
+                  checked={form.paymentType === "perHour"}
+                  onChange={(e) => setForm({ ...form, paymentType: e.target.value })}
+                />
+                Per Hour
               </label>
-              <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  National ID (Back)
-                </span>
-                <input type="file" className="form-input" />
-              </label>
-              <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  CV / Resume
-                </span>
-                <input type="file" className="form-input" />
-              </label>
-              <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Certificate or License (Optional)
-                </span>
-                <input type="file" className="form-input" />
-              </label>
-              <label className="flex flex-col md:col-span-2">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Profile Video Introduction (Optional)
-                </span>
-                <input type="file" className="form-input" />
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="paymentType"
+                  value="package"
+                  checked={form.paymentType === "package"}
+                  onChange={(e) => setForm({ ...form, paymentType: e.target.value })}
+                />
+                Package
               </label>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Per Hour */}
+            {form.paymentType === "perHour" && (
               <input
-                type="checkbox"
-                id="info-confirmation"
-                className="form-checkbox h-5 w-5 text-primary"
+                type="number"
+                placeholder="Hourly Rate ETB"
+                value={form.hourlyRate}
+                onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })}
+                className="form-input h-12 w-64"
+                required
               />
-              <label htmlFor="info-confirmation" className="text-sm">
-                I confirm that all information provided is accurate.
+            )}
+
+            {/* Package */}
+            {form.paymentType === "package" && (
+              <div className="space-y-4">
+                {form.packages.map((pkg, index) => (
+                  <div key={index} className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-700 flex flex-col md:flex-row gap-4 items-start">
+                    <textarea
+                      placeholder="Package description (e.g., 'Clean whole house')"
+                      value={pkg.title}
+                      onChange={(e) => updatePackage(index, "title", e.target.value)}
+                      className="form-textarea flex-1 h-24 resize-none p-2 rounded-lg border border-gray-300 dark:border-gray-600"
+                      required
+                    />
+                    <input
+                      type="number"
+                      placeholder="Price ETB"
+                      value={pkg.price}
+                      onChange={(e) => updatePackage(index, "price", e.target.value)}
+                      className="form-input w-32 h-12 rounded-lg"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePackage(index)}
+                      className="text-red-500 font-bold text-2xl self-start md:self-center mt-2 md:mt-0"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addPackage}
+                  className="flex items-center gap-2 text-primary font-medium mt-2"
+                >
+                  <span className="text-xl">+</span> Add Package
+                </button>
+
+                {/* Live Preview */}
+                <div className="mt-4">
+                  <h3 className="font-semibold mb-2 text-lg">Preview:</h3>
+                  <div className="space-y-2">
+                    {form.packages.map((pkg, index) => (
+                      <div
+                        key={index}
+                        className="border rounded-lg p-3 bg-white dark:bg-gray-800 flex justify-between items-start shadow-sm"
+                      >
+                        <div>
+                          <p className="font-semibold text-gray-800 dark:text-gray-100">{pkg.title || "Package description"}</p>
+                          <p className="text-gray-500 dark:text-gray-300">Price: {pkg.price ? `${pkg.price} ETB` : "0 ETB"}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Verification */}
+          <section className="space-y-6">
+            <h2 className="text-xl font-bold border-b pb-3">C. Verification Documents *</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="flex flex-col md:col-span-2">
+                <span className="font-medium pb-1">FIN Number *</span>
+                <input type="text" value={finNumber} onChange={(e) => setFinNumber(e.target.value)} className="form-input h-12" required />
+              </label>
+              <label className="flex flex-col">
+                <span className="font-medium pb-1">National ID (Front) *</span>
+                <input type="file" name="nationalIdFront" onChange={handleChange} className="form-input" required />
+              </label>
+              <label className="flex flex-col">
+                <span className="font-medium pb-1">National ID (Back) *</span>
+                <input type="file" name="nationalIdBack" onChange={handleChange} className="form-input" required />
+              </label>
+              <label className="flex flex-col">
+                <span className="font-medium pb-1">CV / Resume *</span>
+                <input type="file" name="cvFile" onChange={handleChange} className="form-input" required />
+              </label>
+              <label className="flex flex-col md:col-span-2">
+                <span className="font-medium pb-1">Picture of Yourself *</span>
+                <input type="file" name="selfPicture" onChange={handleChange} className="form-input" required />
               </label>
             </div>
           </section>
 
-          {/* D. Banking / Payment Setup */}
+          {/* Banking */}
           <section className="space-y-6">
-            <h2 className="text-xl font-bold border-b pb-3 border-[#dbe1e6] dark:border-gray-700">
-              D. Banking / Payment Setup (Optional)
-            </h2>
+            <h2 className="text-xl font-bold border-b pb-3">D. Banking / Payment *</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Preferred Payout Method
-                </span>
-                <select className="form-select h-12">
-                  <option>Select a method</option>
+                <span className="font-medium pb-1">Preferred Payout Method *</span>
+                <select
+                  name="payoutMethod"
+                  value={form.payoutMethod}
+                  onChange={handleChange}
+                  className="form-select h-12"
+                  required
+                >
+                  <option value="">Select a method</option>
                   <option>Telebirr</option>
                   <option>CBE Birr</option>
                   <option>Bank Account</option>
                 </select>
               </label>
               <label className="flex flex-col">
-                <span className="text-[#111518] dark:text-gray-200 font-medium pb-1">
-                  Account Number
-                </span>
+                <span className="font-medium pb-1">Account / Phone Number *</span>
                 <input
                   type="text"
+                  name="accountNumber"
+                  value={form.accountNumber}
+                  onChange={handleChange}
                   className="form-input h-12"
-                  placeholder="Enter your account/phone number"
+                  required
                 />
               </label>
             </div>
           </section>
 
-          {/* Submit */}
+          {error && <ErrorMessage message={error} />}
+          {success && <SuccessMessage message={success} />}
+
           <button
             type="submit"
-            className="w-full h-12 bg-primary text-white rounded-lg font-bold"
+            disabled={loading}
+            className="w-full h-12 bg-primary text-white rounded-lg font-bold disabled:opacity-50"
           >
-            Submit & Proceed to Verification
+            {loading ? <LoadingSpinner /> : "Submit & Proceed to Verification"}
           </button>
-
-          <p className="text-center text-sm text-[#60798a] dark:text-gray-400 mt-4">
-            Already have an account?{" "}
-            <a className="text-primary font-semibold hover:underline" href="#">
-              Sign In
-            </a>
-          </p>
         </form>
       </main>
-
-      {/* Footer */}
-      <footer className="w-full py-6 px-4 sm:px-8 md:px-12 text-center text-[#60798a] dark:text-gray-400">
-        <div className="flex justify-center items-center gap-6 text-sm">
-          <a href="#" className="hover:text-primary">
-            Terms of Service
-          </a>
-          <a href="#" className="hover:text-primary">
-            Privacy Policy
-          </a>
-        </div>
-      </footer>
     </div>
   );
 };

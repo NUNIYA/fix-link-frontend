@@ -1,14 +1,30 @@
 import { useState, type ChangeEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+
+/* 🔽 ADDED IMPORTS */
+import { registerUser } from "../../../api/auth.api";
+import ErrorMessage from "../../../components/ErrorMessage";
+import LoadingSpinner from "../../../components/LoadingSpinner";
+import SuccessMessage from "../../../components/SuccessMessage";
+import LocationInput from "../../../components/LocationInput"; // ✅ Step 1: Import LocationInput
 
 const CustomerRegister = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const email = (location.state as { email?: string })?.email;
+
+  // Guard against direct access
+  if (!email) {
+    navigate("/signup");
+    return null;
+  }
 
   const [form, setForm] = useState({
     fullName: "",
-    email: "",
     phone: "",
     location: "",
+    dateOfBirth: "",
     password: "",
     confirmPassword: "",
     agree: false,
@@ -18,8 +34,14 @@ const CustomerRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  /* 🔽 ADDED STATES */
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked, files } = e.target;
+
     if (type === "file" && files) {
       setProfilePhoto(files[0]);
     } else if (type === "checkbox") {
@@ -29,31 +51,47 @@ const CustomerRegister = () => {
     }
   };
 
-  const handleSubmit = () => {
+  /* 🔽 REPLACED handleSubmit */
+  const handleSubmit = async () => {
     if (!form.agree) return;
-    // Later: send to backend
-    navigate("/customer/home");
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await registerUser("customer", {
+        fullName: form.fullName,
+        phone: form.phone,
+        location: form.location,
+        dateOfBirth: form.dateOfBirth,
+        password: form.password,
+      });
+
+      setSuccess(response.message);
+
+      setTimeout(() => {
+        navigate("/customer/home");
+      }, 1500);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background-light px-4 py-12">
       <div className="bg-white dark:bg-background-dark/50 rounded-xl shadow w-full max-w-lg p-8 space-y-6">
 
-        {/* Fix-Link Logo */}
+        {/* Logo */}
         <div className="flex flex-col items-center gap-2 mb-6 text-center">
-          <a
-            href="#"
-            className="flex items-center gap-2 text-2xl font-black text-[#111518] dark:text-white"
-          >
-            <span
-              className="material-symbols-outlined text-primary text-4xl"
-              style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}
-            >
+          <div className="flex items-center gap-2 text-2xl font-black">
+            <span className="material-symbols-outlined text-primary text-4xl">
               link
             </span>
             <span>Fix-Link</span>
-          </a>
-          <h1 className="text-3xl font-bold text-[#111518] dark:text-white">
+          </div>
+          <h1 className="text-3xl font-bold">
             Create Your Customer Account
           </h1>
         </div>
@@ -62,7 +100,6 @@ const CustomerRegister = () => {
         <div className="flex items-center gap-4">
           <div className="relative">
             <img
-              alt="Profile"
               src={
                 profilePhoto
                   ? URL.createObjectURL(profilePhoto)
@@ -72,7 +109,7 @@ const CustomerRegister = () => {
             />
             <label
               htmlFor="photo-upload"
-              className="absolute bottom-0 right-0 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90"
+              className="absolute bottom-0 right-0 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center cursor-pointer"
             >
               <span className="material-symbols-outlined text-sm">edit</span>
             </label>
@@ -83,149 +120,133 @@ const CustomerRegister = () => {
               onChange={handleChange}
             />
           </div>
-          <div className="text-sm text-[#60798a] dark:text-gray-400">
-            <p className="font-medium text-[#111518] dark:text-gray-200">
-              Profile Photo
-            </p>
-            <p>Upload a photo for your profile (optional).</p>
-          </div>
-        </div>
-
-        {/* Form Inputs */}
-        <div className="space-y-4">
-          <label className="flex flex-col w-full">
-            <span className="text-[#111518] dark:text-gray-200 text-base font-medium pb-2">
-              Full Name
-            </span>
-            <input
-              name="fullName"
-              value={form.fullName}
-              onChange={handleChange}
-              className="form-input w-full h-12 rounded-lg text-[#111518] dark:text-white"
-            />
-          </label>
-
-          <label className="flex flex-col w-full">
-            <span className="text-[#111518] dark:text-gray-200 text-base font-medium pb-2">
-              Email
-            </span>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              className="form-input w-full h-12 rounded-lg text-[#111518] dark:text-white"
-            />
-          </label>
-
-          <label className="flex flex-col w-full">
-            <span className="text-[#111518] dark:text-gray-200 text-base font-medium pb-2">
-              Phone Number
-            </span>
-            <input
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              className="form-input w-full h-12 rounded-lg text-[#111518] dark:text-white"
-            />
-          </label>
-
-          <label className="flex flex-col w-full relative">
-            <span className="text-[#111518] dark:text-gray-200 text-base font-medium pb-2">
-              Location
-            </span>
-            <input
-              name="location"
-              value={form.location}
-              onChange={handleChange}
-              placeholder="Enter your address or zip code"
-              className="form-input w-full h-12 rounded-lg pl-10 text-[#111518] dark:text-white"
-            />
-            <button
-              type="button"
-              className="absolute left-2 top-10 text-[#60798a] dark:text-gray-400"
-            >
-              <span className="material-symbols-outlined">my_location</span>
-            </button>
-          </label>
-
-          <label className="flex flex-col w-full relative">
-            <span className="text-[#111518] dark:text-gray-200 text-base font-medium pb-2">
-              Password
-            </span>
-            <input
-              type={showPassword ? "text" : "password"}
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              className="form-input w-full h-12 rounded-lg pr-10 text-[#111518] dark:text-white"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-2 top-10  text-[#60798a] dark:text-gray-400"
-            >
-              <span className="material-symbols-outlined">
-                {showPassword ? "visibility_off" : "visibility"}
-              </span>
-            </button>
-          </label>
-
-          <label className="flex flex-col w-full relative">
-            <span className="text-[#111518] dark:text-gray-200 text-base font-medium pb-2">
-              Confirm Password
-            </span>
-            <input
-              type={showConfirmPassword ? "text" : "password"}
-              name="confirmPassword"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              className="form-input w-full h-12 rounded-lg pr-10 text-[#111518] dark:text-white"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-2 top-10 text-[#60798a] dark:text-gray-400"
-            >
-              <span className="material-symbols-outlined">
-                {showConfirmPassword ? "visibility_off" : "visibility"}
-              </span>
-            </button>
-          </label>
-
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="agree"
-              checked={form.agree}
-              onChange={handleChange}
-              className="form-checkbox h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary"
-            />
-            I agree to{" "}
-            <a className="text-primary font-semibold hover:underline" href="#">
-              Terms & Conditions
-            </a>{" "}
-            and{" "}
-            <a className="text-primary font-semibold hover:underline" href="#">
-              Privacy Policy
-            </a>
-            .
-          </label>
-
-          <button
-            onClick={handleSubmit}
-            className="w-full h-12 bg-primary text-white rounded-lg font-bold"
-          >
-            Create Account
-          </button>
-
-          <p className="text-sm text-center text-[#60798a] dark:text-gray-400">
-            Already have an account?{" "}
-            <a className="text-primary font-semibold hover:underline" href="#">
-              Sign In
-            </a>
+          <p className="text-sm text-gray-500">
+            Upload a profile photo (optional)
           </p>
         </div>
+
+        {/* Email (read-only) */}
+        <label className="flex flex-col w-full">
+          <span className="text-base font-medium pb-2">Email</span>
+          <input
+            value={email}
+            disabled
+            className="form-input w-full h-12 rounded-lg bg-gray-100 text-gray-500"
+          />
+        </label>
+
+        {/* Full Name */}
+        <label className="flex flex-col w-full">
+          <span className="text-base font-medium pb-2">Full Name</span>
+          <input
+            name="fullName"
+            value={form.fullName}
+            onChange={handleChange}
+            className="form-input w-full h-12 rounded-lg"
+          />
+        </label>
+
+        {/* Date of Birth */}
+        <label className="flex flex-col w-full">
+          <span className="text-base font-medium pb-2">Date of Birth</span>
+          <input
+            type="date"
+            name="dateOfBirth"
+            value={form.dateOfBirth}
+            onChange={handleChange}
+            className="form-input w-full h-12 rounded-lg"
+          />
+        </label>
+
+        {/* Phone */}
+        <label className="flex flex-col w-full">
+          <span className="text-base font-medium pb-2">Phone Number</span>
+          <input
+            name="phone"
+            value={form.phone}
+            onChange={handleChange}
+            className="form-input w-full h-12 rounded-lg"
+          />
+        </label>
+
+        {/* ✅ LocationInput replaced old input */}
+        <label className="flex flex-col w-full">
+          <span className="text-base font-medium pb-2">Location</span>
+
+          <LocationInput
+            value={form.location}
+            onSelect={(loc) => setForm({ ...form, location: loc })}
+          />
+        </label>
+
+        {/* Password */}
+        <label className="flex flex-col w-full relative">
+          <span className="text-base font-medium pb-2">Password</span>
+          <input
+            type={showPassword ? "text" : "password"}
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            className="form-input w-full h-12 rounded-lg pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-2 top-10 text-gray-400"
+          >
+            <span className="material-symbols-outlined">
+              {showPassword ? "visibility_off" : "visibility"}
+            </span>
+          </button>
+        </label>
+
+        {/* Confirm Password */}
+        <label className="flex flex-col w-full relative">
+          <span className="text-base font-medium pb-2">Confirm Password</span>
+          <input
+            type={showConfirmPassword ? "text" : "password"}
+            name="confirmPassword"
+            value={form.confirmPassword}
+            onChange={handleChange}
+            className="form-input w-full h-12 rounded-lg pr-10"
+          />
+          <button
+            type="button"
+            onClick={() =>
+              setShowConfirmPassword(!showConfirmPassword)
+            }
+            className="absolute right-2 top-10 text-gray-400"
+          >
+            <span className="material-symbols-outlined">
+              {showConfirmPassword ? "visibility_off" : "visibility"}
+            </span>
+          </button>
+        </label>
+
+        {/* Terms */}
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="agree"
+            checked={form.agree}
+            onChange={handleChange}
+          />
+          I agree to the Terms & Privacy Policy
+        </label>
+
+        {/* 🔽 UI FEEDBACK */}
+        {error && <ErrorMessage message={error} />}
+        {success && <SuccessMessage message={success} />}
+
+        {/* 🔽 UPDATED SUBMIT BUTTON */}
+        <button
+          disabled={loading}
+          onClick={handleSubmit}
+          className="w-full h-12 bg-primary text-white rounded-lg font-bold disabled:opacity-50"
+        >
+          {loading ? <LoadingSpinner /> : "Create Account"}
+        </button>
+
       </div>
     </div>
   );

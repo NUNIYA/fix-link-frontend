@@ -1,40 +1,33 @@
 import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { sendOtp } from "../../api/auth.api";
 import ErrorMessage from "../../components/ErrorMessage";
 import LoadingSpinner from "../../components/LoadingSpinner";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
 
 const EmailSignup = () => {
   const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
-  // Email validation helper
-  const isValidEmail = (email: string) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
   const handleContinue = async () => {
-    setError("");
+    setError(null);
 
-    if (!email) {
-      setError("Email is required");
-      return;
-    }
-
-    if (!isValidEmail(email)) {
+    if (!email.includes("@")) {
       setError("Please enter a valid email address");
       return;
     }
 
     setLoading(true);
-
-    // Fake API call (simulate backend request)
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await sendOtp(email);
       navigate("/signup/verify", { state: { email } });
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message || "Failed to send OTP");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

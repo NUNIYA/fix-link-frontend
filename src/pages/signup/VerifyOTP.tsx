@@ -1,14 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { verifyOtp, sendOtp } from "../../api/auth.api";
+import ErrorMessage from "../../components/ErrorMessage";
+import LoadingSpinner from "../../components/LoadingSpinner";
 
 const VerifyEmail = () => {
-  const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
-  const [timeLeft, setTimeLeft] = useState(30);
-
-  // UI states
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -20,6 +16,13 @@ const VerifyEmail = () => {
     navigate("/signup");
     return null;
   }
+
+  const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
+  const [timeLeft, setTimeLeft] = useState(30);
+
+  // UI states
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // countdown
   useEffect(() => {
@@ -38,37 +41,47 @@ const VerifyEmail = () => {
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
+
+    // auto-focus next input
+    if (value && index < 5) {
+      const next = document.getElementById(`otp-${index + 1}`);
+      next?.focus();
+    }
   };
 
-  const handleVerify = () => {
-    setError("");
+  const handleVerify = async () => {
     const code = otp.join("");
-
     if (code.length !== 6) {
       setError("Please enter the complete 6-digit code");
       return;
     }
 
     setLoading(true);
+    setError(null);
 
-    // fake backend verification
-    setTimeout(() => {
+    try {
+      await verifyOtp(code); // optionally pass email if backend needs it
+      navigate("/signup/role", { state: { email } });
+    } catch (err: any) {
+      setError(err.message || "Invalid OTP");
+    } finally {
       setLoading(false);
-      navigate("/signup/role", {
-        state: { email },
-      });
-    }, 1500);
+    }
   };
 
-  const handleResend = () => {
-    setTimeLeft(30);
-    // later: call backend resend OTP
+  const handleResend = async () => {
+    if (!email) return;
+    try {
+      await sendOtp(email);
+      setTimeLeft(30);
+    } catch (err: any) {
+      setError(err.message || "Failed to resend OTP");
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background-light font-display">
       <div className="bg-white p-8 rounded-xl shadow w-full max-w-md text-center">
-
         <h1 className="text-3xl font-bold mb-2">Verify Your Email</h1>
         <p className="text-gray-500 mb-6">
           Enter the 6-digit code sent to your email
@@ -80,22 +93,15 @@ const VerifyEmail = () => {
               key={index}
               id={`otp-${index}`}
               value={digit}
-              onChange={(e) => {
-                handleChange(e.target.value, index);
-                if (e.target.value && index < 5) {
-                  const next = document.getElementById(`otp-${index + 1}`);
-                  next?.focus();
-                }
-              }}
+              onChange={(e) => handleChange(e.target.value, index)}
               maxLength={1}
               className="w-12 h-14 text-center text-xl font-bold border rounded-lg"
             />
           ))}
         </div>
 
-        {error && (
-          <p className="text-red-500 text-sm mb-2">{error}</p>
-        )}
+        {/* Error message */}
+        {error && <ErrorMessage message={error} />}
 
         <p className="text-sm text-gray-500 mb-2">
           Resend code in{" "}
@@ -105,7 +111,7 @@ const VerifyEmail = () => {
         <button
           onClick={handleResend}
           disabled={timeLeft > 0}
-          className={`text-sm font-semibold ${
+          className={`text-sm font-semibold mb-4 ${
             timeLeft > 0
               ? "text-gray-400 cursor-not-allowed"
               : "text-primary"
@@ -117,11 +123,10 @@ const VerifyEmail = () => {
         <button
           onClick={handleVerify}
           disabled={loading}
-          className="w-full h-12 mt-6 bg-primary text-white rounded-lg font-bold disabled:opacity-60"
+          className="w-full h-12 bg-primary text-white rounded-lg font-bold"
         >
-          {loading ? "Verifying..." : "Verify & Continue"}
+          {loading ? <LoadingSpinner /> : "Verify & Continue"}
         </button>
-
       </div>
     </div>
   );

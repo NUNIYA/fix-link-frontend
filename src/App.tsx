@@ -8,6 +8,7 @@ import ProfessionalRegister from "./pages/auth/professional/ProfessionalRegister
 import CustomerHome from "./pages/auth/customer/CustomerHome";
 import ProfessionalHome from "./pages/auth/professional/ProfessionalHome"
 import LoginPage from "./pages/auth/login";
+import PendingApproval from "./pages/signup/PendingApproval";
 
 function App() {
   return (
@@ -30,6 +31,8 @@ function App() {
       <Route path="/customer/home" element={<CustomerHome />} />
       <Route path="/professional/home" element={<ProfessionalHome />} />
       
+      <Route path="/signup/pending-approval" element={<PendingApproval />} />
+
       </Routes>
     </BrowserRouter>
   );
