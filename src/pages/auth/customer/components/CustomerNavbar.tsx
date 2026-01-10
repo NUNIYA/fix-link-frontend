@@ -21,20 +21,20 @@ const CustomerNavbar = () => {
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 py-4 px-6 md:px-12 flex justify-between items-center transition-all duration-300 ${scrolled
-        ? "bg-blue-100 shadow-md text-gray-900"
-        : "text-white"
+        ? "bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-md py-3 border-b border-gray-100 dark:border-gray-800 text-gray-900 dark:text-white"
+        : "bg-transparent text-white"
         }`}
     >
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center font-bold text-white">
+        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-bold text-white">
           F
         </div>
         <span className="text-xl font-bold">Fix-Link</span>
       </div>
 
       <div className="flex items-center gap-6 text-sm font-medium">
-        <a className="hidden md:flex hover:text-blue-500 cursor-pointer">Dashboard</a>
-        <a className="hidden md:flex hover:text-blue-500 cursor-pointer">Bookings</a>
+        <a className="hidden md:flex hover:text-primary cursor-pointer transition-colors">Dashboard</a>
+        <a className="hidden md:flex hover:text-primary cursor-pointer transition-colors">Bookings</a>
 
         <button>
           <span className="material-icons-round text-xl">
@@ -53,7 +53,7 @@ const CustomerNavbar = () => {
         <div className="relative group">
           <button className="flex items-center">
             <img
-              className="w-9 h-9 rounded-full object-cover border-2 border-white/30 hover:border-blue-500 transition-colors"
+              className="w-9 h-9 rounded-full object-cover border-2 border-white/30 hover:border-primary transition-colors"
               src={user?.profilePhoto || "https://randomuser.me/api/portraits/men/1.jpg"}
               alt="Profile"
             />

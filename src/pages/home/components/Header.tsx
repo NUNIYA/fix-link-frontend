@@ -14,14 +14,14 @@ const Header = () => {
 
   return (
     <header
-      className={`fixed top-0 z-50 w-full transition-colors duration-300 ${scrolled
-          ? "bg-blue-200/80 backdrop-blur-sm"
-          : "bg-transparent"
+      className={`fixed top-0 z-50 w-full transition-all duration-300 ${scrolled
+        ? "bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-md py-0 border-b border-gray-100 dark:border-gray-800"
+        : "bg-transparent py-2"
         }`}
     >
       <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
         <div
-          className={`flex items-center gap-3 font-bold transition-colors duration-300 ${scrolled ? "text-black" : "text-white"
+          className={`flex items-center gap-3 font-bold transition-colors duration-300 ${scrolled ? "text-primary" : "text-white"
             }`}
         >
           <svg className="w-6 h-6" viewBox="0 0 48 48" fill="currentColor">
@@ -31,7 +31,7 @@ const Header = () => {
         </div>
 
         <nav
-          className={`hidden md:flex gap-8 text-sm font-medium transition-colors duration-300 ${scrolled ? "text-black" : "text-white"
+          className={`hidden md:flex gap-8 text-sm font-medium transition-colors duration-300 ${scrolled ? "text-gray-700 dark:text-gray-200" : "text-white"
             }`}
         >
           <Link to="/" className="hover:text-primary transition-colors">
@@ -59,7 +59,7 @@ const Header = () => {
             to="/login"
             className="bg-white/20 px-4 h-10 rounded-lg flex items-center font-bold hover:bg-white/30 transition-colors"
           >
-            <span className={scrolled ? "text-black" : "text-white"}>Login</span>
+            <span className={scrolled ? "text-primary" : "text-white"}>Login</span>
           </Link>
         </div>
       </div>
