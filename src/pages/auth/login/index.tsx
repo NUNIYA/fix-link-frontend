@@ -26,6 +26,7 @@ const LoginPage: React.FC = () => {
       const response = await loginUser(email, password);
       login(response.token, response.user);
 
+      // Redirect based on role
       if (response.user.role === "professional") {
         if (response.user.status === "PENDING_APPROVAL") {
           navigate("/signup/pending-approval");
@@ -33,7 +34,14 @@ const LoginPage: React.FC = () => {
           navigate("/professional/home");
         }
       } else {
-        navigate("/customer/home");
+        // For customers, check if there is a return query param
+        const params = new URLSearchParams(window.location.search);
+        const returnUrl = params.get("returnUrl");
+        if (returnUrl) {
+          navigate(returnUrl);
+        } else {
+          navigate("/customer/home");
+        }
       }
     } catch (err: any) {
       setError(err.message || "Failed to login");

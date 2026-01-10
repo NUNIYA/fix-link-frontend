@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../context/AuthContext";
 
 // Define the type for each service
 interface Service {
@@ -25,6 +27,21 @@ const extraServices: Service[] = [
 
 const ServicesSection = () => {
   const [showMore, setShowMore] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const handleServiceClick = (serviceName: string) => {
+    // URL encode the category name just in case (e.g. "IT Technician" -> "IT%20Technician")
+    const categoryParam = encodeURIComponent(serviceName);
+    const targetUrl = `/customer/home?category=${categoryParam}`;
+
+    if (isAuthenticated) {
+      navigate(targetUrl);
+    } else {
+      // Redirect to login with returnUrl
+      navigate(`/login?returnUrl=${encodeURIComponent(targetUrl)}`);
+    }
+  };
 
   return (
     <section
@@ -45,6 +62,7 @@ const ServicesSection = () => {
           {services.map((service) => (
             <div
               key={service.name}
+              onClick={() => handleServiceClick(service.name)}
               className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group cursor-pointer"
             >
               <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
@@ -76,6 +94,7 @@ const ServicesSection = () => {
             {extraServices.map((service) => (
               <div
                 key={service.name}
+                onClick={() => handleServiceClick(service.name)}
                 className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group cursor-pointer"
               >
                 <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">

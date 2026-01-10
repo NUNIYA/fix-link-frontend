@@ -9,6 +9,7 @@ import CustomerHome from "./pages/auth/customer/CustomerHome";
 import ProfessionalHome from "./pages/auth/professional/ProfessionalHome"
 import LoginPage from "./pages/auth/login";
 import PendingApproval from "./pages/signup/PendingApproval";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -17,21 +18,35 @@ function App() {
         {/* Home Page */}
         <Route path="/" element={<Home />} />
         {/* Signup flow */}
-      <Route path="/signup/email" element={<EmailSignup />} />
-      <Route path="/signup/verify" element={<VerifyOTP />} />
-      <Route path="/signup/role" element={<ChooseRole />} />
+        <Route path="/signup/email" element={<EmailSignup />} />
+        <Route path="/signup/verify" element={<VerifyOTP />} />
+        <Route path="/signup/role" element={<ChooseRole />} />
 
-      {/* Registration */}
-      <Route path="/signup/customer" element={<CustomerRegister />} />
-      <Route path="/signup/professional" element={<ProfessionalRegister />} />
-      {/* Login */}
-      <Route path="/login" element={<LoginPage />} />
+        {/* Registration */}
+        <Route path="/signup/customer" element={<CustomerRegister />} />
+        <Route path="/signup/professional" element={<ProfessionalRegister />} />
+        {/* Login */}
+        <Route path="/login" element={<LoginPage />} />
 
-      {/* Dashboards */}
-      <Route path="/customer/home" element={<CustomerHome />} />
-      <Route path="/professional/home" element={<ProfessionalHome />} />
-      
-      <Route path="/signup/pending-approval" element={<PendingApproval />} />
+        {/* Dashboards */}
+        <Route
+          path="/customer/home"
+          element={
+            <ProtectedRoute role="customer">
+              <CustomerHome />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/professional/home"
+          element={
+            <ProtectedRoute role="professional">
+              <ProfessionalHome />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/signup/pending-approval" element={<PendingApproval />} />
 
       </Routes>
     </BrowserRouter>

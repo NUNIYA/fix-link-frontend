@@ -1,9 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LocationInput from "../../../../components/LocationInput";
 
 const HeroSearch: React.FC = () => {
   const [category, setCategory] = useState<string>("Plumbing");
   const [location, setLocation] = useState<string>("");
+
+  useEffect(() => {
+    // Check for category in URL params
+    const params = new URLSearchParams(window.location.search);
+    const categoryParam = params.get("category");
+    if (categoryParam) {
+      setCategory(categoryParam);
+    }
+  }, []);
 
   return (
     <section className="relative w-full">
