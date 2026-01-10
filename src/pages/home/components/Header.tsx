@@ -14,17 +14,15 @@ const Header = () => {
 
   return (
     <header
-      className={`fixed top-0 z-50 w-full transition-colors duration-300 ${
-        scrolled
+      className={`fixed top-0 z-50 w-full transition-colors duration-300 ${scrolled
           ? "bg-blue-200/80 backdrop-blur-sm"
           : "bg-transparent"
-      }`}
+        }`}
     >
       <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
         <div
-          className={`flex items-center gap-3 font-bold transition-colors duration-300 ${
-            scrolled ? "text-black" : "text-white"
-          }`}
+          className={`flex items-center gap-3 font-bold transition-colors duration-300 ${scrolled ? "text-black" : "text-white"
+            }`}
         >
           <svg className="w-6 h-6" viewBox="0 0 48 48" fill="currentColor">
             <path d="M8.57829 8.57829L24 24L39.4217 8.57829..." />
@@ -33,10 +31,12 @@ const Header = () => {
         </div>
 
         <nav
-          className={`hidden md:flex gap-8 text-sm font-medium transition-colors duration-300 ${
-            scrolled ? "text-black" : "text-white"
-          }`}
+          className={`hidden md:flex gap-8 text-sm font-medium transition-colors duration-300 ${scrolled ? "text-black" : "text-white"
+            }`}
         >
+          <Link to="/" className="hover:text-primary transition-colors">
+            Home
+          </Link>
           <a href="#about" className="hover:text-primary transition-colors">
             About
           </a>

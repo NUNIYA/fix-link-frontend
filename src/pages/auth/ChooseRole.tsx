@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 
 const ChooseRole = () => {
   const [role, setRole] = useState<"customer" | "professional">("customer");
@@ -121,9 +121,9 @@ const ChooseRole = () => {
         {/* Footer */}
         <p className="text-center text-sm text-gray-500 py-6">
           Already have an account?{" "}
-          <span className="text-primary font-medium cursor-pointer hover:underline">
+          <Link to="/login" className="text-primary font-medium cursor-pointer hover:underline">
             Sign In
-          </span>
+          </Link>
         </p>
 
       </div>

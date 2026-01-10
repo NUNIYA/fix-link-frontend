@@ -1,4 +1,5 @@
 import { useState } from "react";
+import LocationInput from "../../../../components/LocationInput";
 
 const HeroSearch: React.FC = () => {
   const [category, setCategory] = useState<string>("Plumbing");
@@ -21,7 +22,7 @@ const HeroSearch: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-2 w-full">
             <div className="relative w-full md:col-span-5">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                construction
+                category
               </span>
               <select
                 className="form-select w-full h-14 pl-10 pr-8 rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-[#111518] dark:text-white focus:ring-primary focus:border-primary"
@@ -37,14 +38,15 @@ const HeroSearch: React.FC = () => {
             </div>
 
             <div className="relative w-full md:col-span-5">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                location_on
-              </span>
-              <input
+              <LocationInput
                 className="form-input w-full h-14 pl-10 rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-[#111518] dark:text-white focus:ring-primary focus:border-primary"
-                placeholder="Enter your location"
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                onSelect={(loc: string) => setLocation(loc)}
+                icon={
+                  <span className="material-symbols-outlined text-gray-500">
+                    location_on
+                  </span>
+                }
               />
             </div>
 
