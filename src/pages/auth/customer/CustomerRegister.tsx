@@ -7,6 +7,7 @@ import ErrorMessage from "../../../components/ErrorMessage";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 import SuccessMessage from "../../../components/SuccessMessage";
 import LocationInput from "../../../components/LocationInput"; // ✅ Step 1: Import LocationInput
+import { useAuth } from "../../../context/AuthContext";
 
 const CustomerRegister = () => {
   const navigate = useNavigate();
@@ -52,11 +53,33 @@ const CustomerRegister = () => {
   };
 
   /* 🔽 REPLACED handleSubmit */
+  const { login } = useAuth(); // Import useAuth at top
+
   const handleSubmit = async () => {
-    if (!form.agree) return;
+    setError(null);
+
+    // 1. Validation Logic
+    const requiredFields = ["fullName", "phone", "dateOfBirth", "password", "confirmPassword"];
+
+    for (const field of requiredFields) {
+      if (!form[field as keyof typeof form]) {
+        setError("Please fill all required fields");
+        return;
+      }
+    }
+
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (!form.agree) {
+      setError("You must agree to the Terms & Privacy Policy");
+      return;
+    }
 
     setLoading(true);
-    setError(null);
+
 
     try {
       const response = await registerUser("customer", {
@@ -66,6 +89,11 @@ const CustomerRegister = () => {
         dateOfBirth: form.dateOfBirth,
         password: form.password,
       });
+
+      // AUTO LOGIN using context
+      if (response.token && response.user) {
+        login(response.token, response.user);
+      }
 
       setSuccess(response.message);
 

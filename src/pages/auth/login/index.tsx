@@ -1,17 +1,45 @@
 // src/pages/LoginPage.tsx
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { FaGoogle, FaApple } from "react-icons/fa";
+import { Link, useNavigate } from "react-router-dom";
+import { FcGoogle } from "react-icons/fc";
+import { loginUser } from "../../../api/auth.api";
+import { useAuth } from "../../../context/AuthContext";
+import LoadingSpinner from "../../../components/LoadingSpinner";
+import ErrorMessage from "../../../components/ErrorMessage";
 
 const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: handle login logic
-    console.log("Login attempt:", { email, password });
+    setError(null);
+    setLoading(true);
+
+    try {
+      const response = await loginUser(email, password);
+      login(response.token, response.user);
+
+      if (response.user.role === "professional") {
+        if (response.user.status === "PENDING_APPROVAL") {
+          navigate("/signup/pending-approval");
+        } else {
+          navigate("/professional/home");
+        }
+      } else {
+        navigate("/customer/home");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to login");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,13 +57,8 @@ const LoginPage: React.FC = () => {
         {/* Social Login Buttons */}
         <div className="flex flex-col gap-3">
           <button className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-border-color bg-white dark:bg-gray-800 text-sm font-medium text-text-primary dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-            <FaGoogle className="text-xl" />
+            <FcGoogle className="text-xl" />
             <span className="truncate">Sign in with Google</span>
-          </button>
-
-          <button className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-border-color bg-white dark:bg-gray-800 text-sm font-medium text-text-primary dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-            <FaApple className="text-xl" />
-            <span className="truncate">Sign in with Apple</span>
           </button>
         </div>
 
@@ -50,6 +73,13 @@ const LoginPage: React.FC = () => {
             </span>
           </div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4">
+            <ErrorMessage message={error} />
+          </div>
+        )}
 
         {/* Email & Password Form */}
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
@@ -76,9 +106,9 @@ const LoginPage: React.FC = () => {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute inset-y-0 right-0 flex items-center pr-3 text-text-secondary dark:text-gray-400 hover:text-text-primary dark:hover:text-white"
             >
-              <span className="material-symbols-outlined">{
-                showPassword ? "visibility_off" : "visibility"
-              }</span>
+              <span className="material-symbols-outlined">
+                {showPassword ? "visibility_off" : "visibility"}
+              </span>
             </button>
           </div>
 
@@ -93,9 +123,10 @@ const LoginPage: React.FC = () => {
 
           <button
             type="submit"
-            className="flex h-12 w-full items-center justify-center rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-colors"
+            disabled={loading}
+            className="flex h-12 w-full items-center justify-center rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-70"
           >
-            Sign In
+            {loading ? <LoadingSpinner /> : "Sign In"}
           </button>
         </form>
 

@@ -1,4 +1,4 @@
-import type { Role } from "../types/auth.types";
+import type { Role, User } from "../types/auth.types";
 
 /**
  * Simulate backend delay
@@ -34,7 +34,7 @@ export const verifyOtp = async (otp: string) => {
 
   return {
     success: true,
-    emailVerified: true,
+    emailVerified: true, // In real backend, this might return a temp token
   };
 };
 
@@ -55,6 +55,16 @@ export const registerUser = async (
     throw new Error("Password is required");
   }
 
+  // MOCK SUCCESS RESPONSE
+  const mockUser: User = {
+    id: Math.random().toString(36).substr(2, 9),
+    name: formData.fullName,
+    email: formData.email || "test@fixlink.com",
+    role: role,
+    status: role === "professional" ? "PENDING_APPROVAL" : "ACTIVE",
+    profilePhoto: "https://i.pravatar.cc/150",
+  };
+
   return {
     success: true,
     status: role === "professional" ? "PENDING_APPROVAL" : "ACTIVE",
@@ -62,5 +72,44 @@ export const registerUser = async (
       role === "professional"
         ? "Your application is under review. We’ll notify you by email."
         : "Account created successfully",
+    token: "mock-jwt-token-xyz-123", // Return fake token
+    user: mockUser,
+  };
+};
+
+/**
+ * Login User (MOCK)
+ */
+export const loginUser = async (email: string, password: string) => {
+  await fakeDelay(1500);
+
+  if (!email || !password) {
+    throw new Error("Please enter email and password");
+  }
+
+  if (password.length < 6) {
+    throw new Error("Invalid password");
+  }
+
+  // Determine role based on email (for demo purposes)
+  // If email has 'pro' OR 'pending', treat as professional
+  const role: Role = (email.includes("pro") || email.includes("pending")) ? "professional" : "customer";
+
+  // Simulating pending status for testing
+  const status = email.includes("pending") ? "PENDING_APPROVAL" : "ACTIVE";
+
+  const mockUser: User = {
+    id: "user-123",
+    name: email.split("@")[0],
+    email: email,
+    role: role,
+    status: status,
+    profilePhoto: "https://i.pravatar.cc/150",
+  };
+
+  return {
+    success: true,
+    token: "mock-jwt-token-xyz-123",
+    user: mockUser,
   };
 };

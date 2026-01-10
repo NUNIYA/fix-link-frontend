@@ -1,5 +1,7 @@
-import type { JSX } from "react";
+import { type JSX } from "react";
 import { Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import LoadingSpinner from "./LoadingSpinner";
 
 interface Props {
   children: JSX.Element;
@@ -7,14 +9,21 @@ interface Props {
 }
 
 const ProtectedRoute = ({ children, role }: Props) => {
-  const token = localStorage.getItem("token");
-  const userRole = localStorage.getItem("role");
+  const { isAuthenticated, user, isLoading } = useAuth();
 
-  if (!token) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (role && userRole !== role) {
+  if (role && user?.role !== role) {
     return <Navigate to="/" replace />;
   }
 
