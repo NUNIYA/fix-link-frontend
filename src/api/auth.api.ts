@@ -113,3 +113,24 @@ export const loginUser = async (email: string, password: string) => {
     user: mockUser,
   };
 };
+
+/**
+ * Forgot Password (MOCK)
+ */
+export const forgotPassword = async (email: string) => {
+  await fakeDelay(1000);
+  console.log(`Sending reset password email to ${email}`);
+  if (!email) throw new Error("Email is required");
+  return { success: true, message: "Reset link sent" };
+};
+
+/**
+ * Reset Password (MOCK)
+ */
+export const resetPassword = async (token: string, newPassword: string) => {
+  await fakeDelay(1000);
+  console.log(`Resetting password with token ${token} to ${newPassword}`);
+  if (!token) throw new Error("Invalid token");
+  if (!newPassword) throw new Error("New password is required");
+  return { success: true, message: "Password reset successfully" };
+};

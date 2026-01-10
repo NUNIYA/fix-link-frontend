@@ -8,6 +8,8 @@ import ProfessionalRegister from "./pages/auth/professional/ProfessionalRegister
 import CustomerHome from "./pages/auth/customer/CustomerHome";
 import ProfessionalHome from "./pages/auth/professional/ProfessionalHome"
 import LoginPage from "./pages/auth/login";
+import ForgotPassword from "./pages/auth/login/ForgotPassword";
+import ResetPassword from "./pages/auth/login/ResetPassword";
 import PendingApproval from "./pages/signup/PendingApproval";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -25,8 +27,10 @@ function App() {
         {/* Registration */}
         <Route path="/signup/customer" element={<CustomerRegister />} />
         <Route path="/signup/professional" element={<ProfessionalRegister />} />
-        {/* Login */}
+        {/* Login & Recovery */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Dashboards */}
         <Route
