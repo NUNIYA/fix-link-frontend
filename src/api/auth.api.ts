@@ -55,6 +55,11 @@ export const registerUser = async (
     throw new Error("Password is required");
   }
 
+  // MOCK: Simulate "User already exists"
+  if (formData.email?.includes("exist")) {
+    throw new Error("User with this email already exists");
+  }
+
   // MOCK SUCCESS RESPONSE
   const mockUser: User = {
     id: Math.random().toString(36).substr(2, 9),
