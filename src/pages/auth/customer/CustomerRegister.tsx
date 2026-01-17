@@ -7,6 +7,7 @@ import ErrorMessage from "../../../components/ErrorMessage";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 import SuccessMessage from "../../../components/SuccessMessage";
 import LocationInput from "../../../components/LocationInput"; // ✅ Step 1: Import LocationInput
+import PasswordStrength from "../../../components/PasswordStrength";
 import { useAuth } from "../../../context/AuthContext";
 
 const CustomerRegister = () => {
@@ -249,6 +250,15 @@ const CustomerRegister = () => {
               {showPassword ? "visibility_off" : "visibility"}
             </span>
           </button>
+
+          <PasswordStrength
+            password={form.password}
+            userData={{
+              firstName: form.firstName,
+              lastName: form.lastName,
+              email: email
+            }}
+          />
         </label>
 
         {/* Confirm Password */}

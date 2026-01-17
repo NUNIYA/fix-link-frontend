@@ -5,6 +5,7 @@ import ErrorMessage from "../../../components/ErrorMessage";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 import SuccessMessage from "../../../components/SuccessMessage";
 import LocationInput from "../../../components/LocationInput";
+import PasswordStrength from "../../../components/PasswordStrength";
 
 const ProfessionalRegister = () => {
   const navigate = useNavigate();
@@ -323,6 +324,15 @@ const ProfessionalRegister = () => {
                     {showPassword ? "visibility_off" : "visibility"}
                   </span>
                 </button>
+
+                <PasswordStrength
+                  password={form.password}
+                  userData={{
+                    firstName: form.firstName,
+                    lastName: form.lastName,
+                    email: email
+                  }}
+                />
               </label>
 
               <label className="flex flex-col relative">
