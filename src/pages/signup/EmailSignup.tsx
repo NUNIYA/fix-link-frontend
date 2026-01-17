@@ -14,7 +14,9 @@ const EmailSignup = () => {
   const handleContinue = async () => {
     setError(null);
 
-    if (!email.includes("@")) {
+    // Basic email regex validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       setError("Please enter a valid email address");
       return;
     }
@@ -40,7 +42,7 @@ const EmailSignup = () => {
 
           <div className="w-full max-w-4xl">
             <div className="flex flex-col rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.05)] bg-card-light md:flex-row">
-              
+
               {/* Left section */}
               <div className="flex flex-col gap-4 p-6 sm:p-8 md:p-10 w-full">
                 <div className="flex flex-col gap-2">

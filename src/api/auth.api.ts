@@ -12,7 +12,9 @@ const fakeDelay = (ms: number) =>
 export const sendOtp = async (email: string) => {
   await fakeDelay(1000);
 
-  if (!email.includes("@")) {
+  // Basic email regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
     throw new Error("Please enter a valid email address");
   }
 
@@ -125,7 +127,12 @@ export const loginUser = async (email: string, password: string) => {
 export const forgotPassword = async (email: string) => {
   await fakeDelay(1000);
   console.log(`Sending reset password email to ${email}`);
-  if (!email) throw new Error("Email is required");
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new Error("Please enter a valid email address");
+  }
+
   return { success: true, message: "Reset link sent" };
 };
 
