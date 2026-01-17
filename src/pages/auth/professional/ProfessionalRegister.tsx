@@ -60,26 +60,40 @@ const ProfessionalRegister = () => {
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
+    setError(null);
     const target = e.target;
+
     if (target instanceof HTMLInputElement) {
       const { name, value, type, files } = target;
+
       if (type === "file" && files && files.length > 0) {
-        switch (name) {
-          case "profilePhoto":
-            setProfilePhoto(files[0]);
-            break;
-          case "nationalIdFront":
-            setNationalIdFront(files[0]);
-            break;
-          case "nationalIdBack":
-            setNationalIdBack(files[0]);
-            break;
-          case "cvFile":
-            setCvFile(files[0]);
-            break;
-          case "selfPicture":
-            setSelfPicture(files[0]);
-            break;
+        const file = files[0];
+        const validImageTypes = ["image/jpeg", "image/png", "image/jpg"];
+        const validDocTypes = [
+          "application/pdf",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ];
+
+        // Handle CV separately
+        if (name === "cvFile") {
+          if (!validDocTypes.includes(file.type) && !file.name.endsWith(".docx")) {
+            setError("CV must be a PDF or DOCX file");
+            return;
+          }
+          setCvFile(file);
+        } else {
+          // All other files are images
+          if (!validImageTypes.includes(file.type)) {
+            setError(`Please upload a valid image (PNG or JPG) for ${name}`);
+            return;
+          }
+
+          switch (name) {
+            case "profilePhoto": setProfilePhoto(file); break;
+            case "nationalIdFront": setNationalIdFront(file); break;
+            case "nationalIdBack": setNationalIdBack(file); break;
+            case "selfPicture": setSelfPicture(file); break;
+          }
         }
       } else {
         setForm({ ...form, [name]: value });
@@ -269,7 +283,7 @@ const ProfessionalRegister = () => {
 
               <label className="flex flex-col">
                 <span className="font-medium pb-1">Profile Photo *</span>
-                <input type="file" name="profilePhoto" onChange={handleChange} className="form-input" required />
+                <input type="file" name="profilePhoto" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
               </label>
 
               <label className="flex flex-col relative">
@@ -533,19 +547,19 @@ const ProfessionalRegister = () => {
               </label>
               <label className="flex flex-col">
                 <span className="font-medium pb-1">National ID (Front) *</span>
-                <input type="file" name="nationalIdFront" onChange={handleChange} className="form-input" required />
+                <input type="file" name="nationalIdFront" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
               </label>
               <label className="flex flex-col">
                 <span className="font-medium pb-1">National ID (Back) *</span>
-                <input type="file" name="nationalIdBack" onChange={handleChange} className="form-input" required />
+                <input type="file" name="nationalIdBack" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
               </label>
               <label className="flex flex-col">
                 <span className="font-medium pb-1">CV / Resume *</span>
-                <input type="file" name="cvFile" onChange={handleChange} className="form-input" required />
+                <input type="file" name="cvFile" onChange={handleChange} className="form-input" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
               </label>
               <label className="flex flex-col md:col-span-2">
                 <span className="font-medium pb-1">Picture of Yourself *</span>
-                <input type="file" name="selfPicture" onChange={handleChange} className="form-input" required />
+                <input type="file" name="selfPicture" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
               </label>
             </div>
           </section>

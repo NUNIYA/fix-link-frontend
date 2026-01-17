@@ -42,9 +42,17 @@ const CustomerRegister = () => {
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked, files } = e.target;
+    setError(null);
 
     if (type === "file" && files) {
-      setProfilePhoto(files[0]);
+      const file = files[0];
+      const validImageTypes = ["image/jpeg", "image/png", "image/jpg"];
+
+      if (!validImageTypes.includes(file.type)) {
+        setError("Please upload a valid image (PNG or JPG)");
+        return;
+      }
+      setProfilePhoto(file);
     } else if (type === "checkbox") {
       setForm({ ...form, [name]: checked });
     } else {
@@ -144,6 +152,7 @@ const CustomerRegister = () => {
             <input
               id="photo-upload"
               type="file"
+              accept="image/png, image/jpeg, image/jpg"
               className="sr-only"
               onChange={handleChange}
             />
