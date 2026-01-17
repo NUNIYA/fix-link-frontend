@@ -20,7 +20,8 @@ const ProfessionalRegister = () => {
   }
 
   const [form, setForm] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     phone: "",
     gender: "",
     dateOfBirth: "",
@@ -139,7 +140,8 @@ const ProfessionalRegister = () => {
 
     // Required fields
     const requiredFields = [
-      "fullName",
+      "firstName",
+      "lastName",
       "phone",
       "gender",
       "dateOfBirth",
@@ -206,10 +208,15 @@ const ProfessionalRegister = () => {
         email,
         finNumber,
       });
-      setSuccess(response.message);
-      setTimeout(() => {
-        navigate("/signup/pending-approval");
-      }, 1500);
+      // if (response.status === "ACTIVE") {
+      //   login(response.token, response.user); // Auto-login if backend approves immediately
+      //   setTimeout(() => navigate("/professional/home"), 1500);
+      // } else {
+      //   setTimeout(() => navigate("/signup/pending-approval"), 1500);
+      // }
+
+      // Standard Flow: Verify Email First
+      setTimeout(() => navigate("/signup/verify", { state: { email } }), 1500);
     } catch (err: any) {
       setError(err.message || "Submission failed");
     } finally {
@@ -252,11 +259,22 @@ const ProfessionalRegister = () => {
             <h2 className="text-xl font-bold border-b pb-3">A. Personal Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="flex flex-col">
-                <span className="font-medium pb-1">Full Name *</span>
+                <span className="font-medium pb-1">First Name *</span>
                 <input
                   type="text"
-                  name="fullName"
-                  value={form.fullName}
+                  name="firstName"
+                  value={form.firstName}
+                  onChange={handleChange}
+                  className="form-input h-12"
+                  required
+                />
+              </label>
+              <label className="flex flex-col">
+                <span className="font-medium pb-1">Last Name *</span>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={form.lastName}
                   onChange={handleChange}
                   className="form-input h-12"
                   required

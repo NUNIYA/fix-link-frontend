@@ -22,7 +22,8 @@ const CustomerRegister = () => {
   }
 
   const [form, setForm] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     phone: "",
     location: "",
     dateOfBirth: "",
@@ -67,7 +68,7 @@ const CustomerRegister = () => {
     setError(null);
 
     // 1. Validation Logic
-    const requiredFields = ["fullName", "phone", "dateOfBirth", "password", "confirmPassword"];
+    const requiredFields = ["firstName", "lastName", "phone", "dateOfBirth", "password", "confirmPassword"];
 
     for (const field of requiredFields) {
       if (!form[field as keyof typeof form]) {
@@ -91,22 +92,24 @@ const CustomerRegister = () => {
 
     try {
       const response = await registerUser("customer", {
-        fullName: form.fullName,
+        firstName: form.firstName,
+        lastName: form.lastName,
         phone: form.phone,
         location: form.location,
         dateOfBirth: form.dateOfBirth,
         password: form.password,
+        email: email, // ✅ Pass email from location state
       });
 
-      // AUTO LOGIN using context
-      if (response.token && response.user) {
-        login(response.token, response.user);
-      }
+      // DO NOT Auto Login yet -> Go to Verification
+      // if (response.token && response.user) {
+      //   login(response.token, response.user);
+      // }
 
-      setSuccess(response.message);
+      setSuccess(response.message || "Account created! Please verify your email.");
 
       setTimeout(() => {
-        navigate("/customer/home");
+        navigate("/signup/verify", { state: { email } });
       }, 1500);
     } catch (err: any) {
       setError(err.message || "Something went wrong");
@@ -172,16 +175,27 @@ const CustomerRegister = () => {
           />
         </label>
 
-        {/* Full Name */}
-        <label className="flex flex-col w-full">
-          <span className="text-base font-medium pb-2">Full Name</span>
-          <input
-            name="fullName"
-            value={form.fullName}
-            onChange={handleChange}
-            className="form-input w-full h-12 rounded-lg"
-          />
-        </label>
+        {/* First & Last Name */}
+        <div className="flex gap-4">
+          <label className="flex flex-col w-full">
+            <span className="text-base font-medium pb-2">First Name</span>
+            <input
+              name="firstName"
+              value={form.firstName}
+              onChange={handleChange}
+              className="form-input w-full h-12 rounded-lg"
+            />
+          </label>
+          <label className="flex flex-col w-full">
+            <span className="text-base font-medium pb-2">Last Name</span>
+            <input
+              name="lastName"
+              value={form.lastName}
+              onChange={handleChange}
+              className="form-input w-full h-12 rounded-lg"
+            />
+          </label>
+        </div>
 
         {/* Date of Birth */}
         <label className="flex flex-col w-full">

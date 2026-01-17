@@ -23,10 +23,11 @@ const EmailSignup = () => {
 
     setLoading(true);
     try {
-      await sendOtp(email);
-      navigate("/signup/verify", { state: { email } });
+      // SKIP OTP: Go straight to Role Selection
+      // await sendOtp(email); 
+      navigate("/signup/role", { state: { email } });
     } catch (err: any) {
-      setError(err.message || "Failed to send OTP");
+      setError(err.message || "Failed to proceed");
     } finally {
       setLoading(false);
     }
