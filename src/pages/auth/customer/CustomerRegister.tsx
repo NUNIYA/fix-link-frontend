@@ -8,7 +8,9 @@ import LoadingSpinner from "../../../components/LoadingSpinner";
 import SuccessMessage from "../../../components/SuccessMessage";
 import LocationInput from "../../../components/LocationInput"; // ✅ Step 1: Import LocationInput
 import PasswordStrength from "../../../components/PasswordStrength";
+import { validatePassword } from "../../../utils/validation";
 import { useAuth } from "../../../context/AuthContext";
+import PhoneInput from "../../../components/PhoneInput";
 
 const CustomerRegister = () => {
   const navigate = useNavigate();
@@ -80,6 +82,17 @@ const CustomerRegister = () => {
 
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match");
+      return;
+    }
+
+    const { isValid, errors } = validatePassword(form.password, {
+      firstName: form.firstName,
+      lastName: form.lastName,
+      email: email
+    });
+
+    if (!isValid) {
+      setError(errors[0]); // Show the first validation error
       return;
     }
 
@@ -213,11 +226,9 @@ const CustomerRegister = () => {
         {/* Phone */}
         <label className="flex flex-col w-full">
           <span className="text-base font-medium pb-2">Phone Number</span>
-          <input
-            name="phone"
+          <PhoneInput
             value={form.phone}
-            onChange={handleChange}
-            className="form-input w-full h-12 rounded-lg"
+            onChange={(val) => setForm({ ...form, phone: val })}
           />
         </label>
 

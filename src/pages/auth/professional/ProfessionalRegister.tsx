@@ -6,6 +6,8 @@ import LoadingSpinner from "../../../components/LoadingSpinner";
 import SuccessMessage from "../../../components/SuccessMessage";
 import LocationInput from "../../../components/LocationInput";
 import PasswordStrength from "../../../components/PasswordStrength";
+import { validatePassword } from "../../../utils/validation";
+import PhoneInput from "../../../components/PhoneInput";
 
 const ProfessionalRegister = () => {
   const navigate = useNavigate();
@@ -194,6 +196,17 @@ const ProfessionalRegister = () => {
       return;
     }
 
+    const { isValid, errors } = validatePassword(form.password, {
+      firstName: form.firstName,
+      lastName: form.lastName,
+      email: email
+    });
+
+    if (!isValid) {
+      setError(errors[0]); // Show the first validation error
+      return;
+    }
+
     const bioWordCount = form.shortBio.trim().split(/\s+/).length;
     if (bioWordCount > 150) {
       setError("Short Bio cannot exceed 150 words");
@@ -290,13 +303,9 @@ const ProfessionalRegister = () => {
 
               <label className="flex flex-col">
                 <span className="font-medium pb-1">Phone Number *</span>
-                <input
-                  type="tel"
-                  name="phone"
+                <PhoneInput
                   value={form.phone}
-                  onChange={handleChange}
-                  className="form-input h-12"
-                  required
+                  onChange={(val) => setForm({ ...form, phone: val })}
                 />
               </label>
 

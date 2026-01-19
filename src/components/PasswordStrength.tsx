@@ -1,4 +1,4 @@
-import React from "react";
+import { validatePassword } from "../utils/validation";
 
 interface PasswordStrengthProps {
     password: string;
@@ -12,26 +12,7 @@ interface PasswordStrengthProps {
 const PasswordStrength: React.FC<PasswordStrengthProps> = ({ password, userData }) => {
     if (!password) return null;
 
-    // Criteria Checks
-    const hasLength = password.length >= 8;
-    const hasNumberOrSymbol = /[\d!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    let hasNoPersonalInfo = true;
-    if (userData) {
-        const lowerPassword = password.toLowerCase();
-        const parts = [
-            userData.firstName?.toLowerCase(),
-            userData.lastName?.toLowerCase(),
-            userData.email?.split("@")[0].toLowerCase(),
-        ].filter((p): p is string => !!p && p.length > 2); // Only check parts > 2 chars
-
-        for (const part of parts) {
-            if (lowerPassword.includes(part)) {
-                hasNoPersonalInfo = false;
-                break;
-            }
-        }
-    }
+    const { hasLength, hasNumberOrSymbol, hasNoPersonalInfo } = validatePassword(password, userData);
 
     // Calculate Strength Level (0-3)
     const checks = [hasLength, hasNumberOrSymbol, hasNoPersonalInfo];
@@ -41,11 +22,7 @@ const PasswordStrength: React.FC<PasswordStrengthProps> = ({ password, userData 
     let color = "bg-red-500";
     let width = "w-1/3";
 
-    if (passedChecks === 2) {
-        strengthLabel = "Medium";
-        color = "bg-yellow-500";
-        width = "w-2/3";
-    } else if (passedChecks === 3) {
+    if (passedChecks === 3) {
         strengthLabel = "Strong";
         color = "bg-green-500";
         width = "w-full";
@@ -55,7 +32,7 @@ const PasswordStrength: React.FC<PasswordStrengthProps> = ({ password, userData 
         <div className="mt-2 space-y-2 text-sm">
             {/* Progress Bar */}
             <div className="flex items-center justify-between text-xs font-semibold text-gray-500 mb-1">
-                <span>Password strength: <span className={`${passedChecks === 3 ? "text-green-600" : passedChecks === 2 ? "text-yellow-600" : "text-red-500"}`}>{strengthLabel}</span></span>
+                <span>Password strength: <span className={`${passedChecks === 3 ? "text-green-600" : "text-red-500"}`}>{strengthLabel}</span></span>
             </div>
             <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
                 <div className={`h-full ${width} ${color} transition-all duration-300`} />
