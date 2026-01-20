@@ -44,9 +44,9 @@ function App() {
         <Route
           path="/professional/home"
           element={
-            <ProtectedRoute role="professional">
-              <ProfessionalHome />
-            </ProtectedRoute>
+
+            <ProfessionalHome />
+
           }
         />
 
