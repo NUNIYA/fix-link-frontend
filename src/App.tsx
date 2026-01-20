@@ -6,6 +6,7 @@ import ChooseRole from "./pages/auth/ChooseRole";
 import CustomerRegister from "./pages/auth/customer/CustomerRegister";
 import ProfessionalRegister from "./pages/auth/professional/ProfessionalRegister";
 import CustomerHome from "./pages/auth/customer/CustomerHome";
+import SearchResults from "./pages/auth/customer/SearchResults";
 import ProfessionalHome from "./pages/auth/professional/ProfessionalHome"
 import LoginPage from "./pages/auth/login";
 import ForgotPassword from "./pages/auth/login/ForgotPassword";
@@ -42,11 +43,19 @@ function App() {
           }
         />
         <Route
-          path="/professional/home"
+          path="/customer/search"
           element={
 
-            <ProfessionalHome />
+            <SearchResults />
 
+          }
+        />
+        <Route
+          path="/professional/home"
+          element={
+            <ProtectedRoute role="professional">
+              <ProfessionalHome />
+            </ProtectedRoute>
           }
         />
 

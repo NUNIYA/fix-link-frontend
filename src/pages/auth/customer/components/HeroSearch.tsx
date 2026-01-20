@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import LocationInput from "../../../../components/LocationInput";
 
 const HeroSearch: React.FC = () => {
   const [category, setCategory] = useState<string>("Plumbing");
   const [location, setLocation] = useState<string>("");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Check for category in URL params
@@ -13,6 +16,10 @@ const HeroSearch: React.FC = () => {
       setCategory(categoryParam);
     }
   }, []);
+
+  const handleSearch = () => {
+    navigate(`/customer/search?category=${encodeURIComponent(category)}&location=${encodeURIComponent(location)}`);
+  };
 
   return (
     <section className="relative w-full">
@@ -59,7 +66,10 @@ const HeroSearch: React.FC = () => {
               />
             </div>
 
-            <button className="flex md:col-span-2 w-full h-14 items-center justify-center rounded-lg bg-primary text-white text-base font-bold hover:bg-primary/90">
+            <button
+              onClick={handleSearch}
+              className="flex md:col-span-2 w-full h-14 items-center justify-center rounded-lg bg-primary text-white text-base font-bold hover:bg-primary/90"
+            >
               Search
             </button>
           </div>
