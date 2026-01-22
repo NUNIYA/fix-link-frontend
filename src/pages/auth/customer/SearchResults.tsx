@@ -1,11 +1,24 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../../context/AuthContext";
+import ProfessionalCard from "./components/ProfessionalCard";
 
 const SearchResults = () => {
     const navigate = useNavigate();
-    const [priceRange, setPriceRange] = useState([2500, 10000]);
+    const { user } = useAuth();
 
-    // Mock Data for Professionals
+    // Filter State
+    const [priceMin, setPriceMin] = useState<number>(2500);
+    const [priceMax, setPriceMax] = useState<number>(10000);
+    const [selectedRating, setSelectedRating] = useState<number>(0);
+    const [selectedExperience, setSelectedExperience] = useState<string[]>([]);
+    const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
+
+    // New Filters
+    const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
+    const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+
+    // Mock Data for Professionals with extended fields
     const professionals = [
         {
             id: 1,
@@ -14,7 +27,11 @@ const SearchResults = () => {
             rating: 4.9,
             quote: "Fast, reliable, and affordable plumbing solutions for your home.",
             price: 350,
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDlBd9E1G_iPXhVaUxUuidOCftDDUxHN5qWBaync__SWk7v86IBDaTdr6auZG42AJmEnUHUqOewxtFaZsSnwz6Vsx94afWJ8d6mERKfTvzxPNHKeWyvE5Dv31p1cD2-tDCKR7c-5lzK1oIxmaPde31dSd7dex7LtjoQarwSklKPoi7OntQ430EQMcMwue_6c7VKrW-HXF0eKXJ0IOapZvd9uKtjNUCFaXDs2OSi1DlHOLXifpqrO7Lk_-_kemAnsDiCDaejYPKNjg"
+            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDlBd9E1G_iPXhVaUxUuidOCftDDUxHN5qWBaync__SWk7v86IBDaTdr6auZG42AJmEnUHUqOewxtFaZsSnwz6Vsx94afWJ8d6mERKfTvzxPNHKeWyvE5Dv31p1cD2-tDCKR7c-5lzK1oIxmaPde31dSd7dex7LtjoQarwSklKPoi3OntQ430EQMcMwue_6c7VKrW-HXF0eKXJ0IOapZvd9uKtjNUCFaXDs2OSi1DlHOLXifpqrO7Lk_-_kemAnsDiCDaejYPKNjg",
+            verified: true,
+            experience: "Senior",
+            availability: "Today",
+            languages: ["English", "Amharic"]
         },
         {
             id: 2,
@@ -22,8 +39,12 @@ const SearchResults = () => {
             role: "Plumber",
             rating: 4.8,
             quote: "Your satisfaction is my priority. Quality work guaranteed.",
-            price: 400,
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBa9iHjZpzWLPC8u-A7S2RSavE0HQBdYeA3wH7UYLVajk3rItsphm-DXE2re9U5SrCu8oUXnPJWS6rEwxexM1QqSL3ofVpA7QaSpImmcO5_fEgwqVVDt66CdiCTNP__Xg4rANfp-iX7BDRydHAGxl91O2geZSyTMNqa4HPaEZuw9heeEmEdb2Lmv4vjpHuA4vhz9XCm_iKExNc7F89ebCUl218n6lNKia9IboPKFVzpY2imVemz7HUzyKrZEGs7Vb6aPHsX-yXPUw"
+            price: 2600,
+            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBa9iHjZpzWLPC8u-A7S2RSavE0HQBdYeA3wH7UYLVajk3rItsphm-DXE2re9U5SrCu8oUXnPJWS6rEwxexM1QqSL3ofVpA7QaSpImmcO5_fEgwqVVDt66CdiCTNP__Xg4rANfp-iX7BDRydHAGxl91O2geZSyTMNqa4HPaEZuw9heeEmEdb2Lmv4vjpHuA4vhz9XCm_iKExNc7F89ebCUl218n6lNKia9IboPKFVzpY2imVemz7HUzyKrZEGs7Vb6aPHsX-yXPUw",
+            verified: true,
+            experience: "Mid-level",
+            availability: "This Week",
+            languages: ["Amharic"]
         },
         {
             id: 3,
@@ -31,8 +52,12 @@ const SearchResults = () => {
             role: "Plumber",
             rating: 4.7,
             quote: "Expert in residential and commercial plumbing repairs.",
-            price: 300,
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAMIMxpBKQ0-FNnKsA0P73VqmoE8zC-MJX6dTlQcLS2wesZ_BEjXM0sSDTum3K1A8rkm8bW3jXXgomo6XB0j62LG0YwbAHV2ylF3YV2tMLmarowJfzIyCJKTfxy-L1DpbX96OaCA7z4nLeT2lFNBWkdzmaOytnaMCDVDvIoEfDBfRqKcHtJhb9iNEWnHHpDzyJIvwP6RGyDga1T2xuwWPprB2tIIjcubNSLTdWEEskJpi0Y1-jyF8vqeCknGKip8yEtMhKLfvxKwQ"
+            price: 3000,
+            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAMIMxpBKQ0-FNnKsA0P73VqmoE8zC-MJX6dTlQcLS2wesZ_BEjXM0sSDTum3K1A8rkm8bW3jXXgomo6XB0j62LG0YwbAHV2ylF3YV2tMLmarowJfzIyCJKTfxy-L1DpbX96OaCA7z4nLeT2lFNBWkdzmaOytnaMCDVDvIoEfDBfRqKcHtJhb9iNEWnHHpDzyJIvwP6RGyDga1T2xuwWPprB2tIIjcubNSLTdWEEskJpi0Y1-jyF8vqeCknGKip8yEtMhKLfvxKwQ",
+            verified: false,
+            experience: "Junior",
+            availability: "Today",
+            languages: ["English", "Amharic", "Oromiffa"]
         },
         {
             id: 4,
@@ -41,7 +66,11 @@ const SearchResults = () => {
             rating: 5.0,
             quote: "Emergency services available 24/7. Your trusted expert.",
             price: 500,
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuB2gz4gk-NChYKVBFkr0CYBK3mkRD5TB769MjJqCNj8jdTnDATiYS3uXdrHReW9O1EGqwNhy4kSfID1yCIojfOCvtynG1krVP_QQHEsOMWMWX1T1uAvBZ-md9hrTx617QSPNIXgj1mOnkru17svM4A_pt8ppnV0p2wMUs_gm_KZYfEsicteqhkvp_j2eLh8Kih3dJmmGBcF7IrLWNUe51KrgBARF6xh0jQybqBVL8G2gLWyOimRzmyqGsEs2UDWSUPAFUzORitnNg"
+            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuB2gz4gk-NChYKVBFkr0CYBK3mkRD5TB769MjJqCNj8jdTnDATiYS3uXdrHReW9O1EGqwNhy4kSfID1yCIojfOCvtynG1krVP_QQHEsOMWMWX1T1uAvBZ-md9hrTx617QSPNIXgj1mOnkru17svM4A_pt8ppnV0p2wMUs_gm_KZYfEsicteqhkvp_j2eLh8Kih3dJmmGBcF7IrLWNUe51KrgBARF6xh0jQybqBVL8G2gLWyOimRzmyqGsEs2UDWSUPAFUzORitNNg",
+            verified: true,
+            experience: "Senior",
+            availability: "Today",
+            languages: ["English"]
         },
         {
             id: 5,
@@ -50,7 +79,11 @@ const SearchResults = () => {
             rating: 4.9,
             quote: "10+ years of experience in fixing complex pipe issues.",
             price: 450,
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBCYjFhA0fA2HdjJiTmJe9A5bEnx8p_WEXh9xGU0Sp-gPiexSdvnfui4Pjuzt-D802BQVrX-8koZNCMgXMi3xmz24lDW33EMEHVnO3R72hofd90shho7lX5J6VPzVDOMYCyj7Cd9sbgL1N1CzarcRjex8aDp1g86CUJX-3IpTi5I9o29gL2DXo9B84_KORzWkcGEBSUH4arhsoEaH_maZ9-wysOOytFbIBVJf21iv6gtf--SFX2yluxpVviDSo_qlsoZM237RTgQg"
+            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBCYjFhA0fA2HdjJiTmJe9A5bEnx8p_WEXh9xGU0Sp-gPiexSdvnfui4Pjuzt-D802BQVrX-8koZNCMgXMi3xmz24lDW33EMEHVnO3R72hofd90shho7lX5J6VPzVDOMYCyj7Cd9sbgL1N1CzarcRjex8aDp1g86CUJX-3IpTi5I9o29gL2DXo9B84_KORzWkcGEBSUH4arhsoEaH_maZ9-wysOOytFbIBVJf21iv6gtf--SFX2yluxpVviDSo_qlsoZM237RTgQg",
+            verified: false,
+            experience: "Senior",
+            availability: "This Week",
+            languages: ["Amharic", "Tigrinya"]
         },
         {
             id: 6,
@@ -58,10 +91,51 @@ const SearchResults = () => {
             role: "Plumber",
             rating: 4.8,
             quote: "Clean, efficient work for modern homes and businesses.",
-            price: 380,
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAKhN0TyumIKZj7RYPgHFZ890eiZQDdkctTrs4kVPprPwq7v65YvqmboKGT5yrB6d_HqKwi8OJayJvy3faoHHgipM36bRop7GCr296KtmZpkMKAXElF6gdq8JWAmdPdbsh9cat2iQ0CfxCsa11f5Q73MgDBF_Bp3oxkExbOic5lqs-mgitrq48z8y40wN_pZRSlvxUMnx8Quj_cAKJd6HqORGW6zFFrnM796GleQpbEpmT0UJE85G1OOVgPhW4QaVvZmWcqh4-qSw"
+            price: 3800,
+            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAKhN0TyumIKZj7RYPgHFZ890eiZQDdkctTrs4kVPprPwq7v65YvqmboKGT5yrB6d_HqKwi8OJayJvy3faoHHgipM36bRop7GCr296KtmZpkMKAXElF6gdq8JWAmdPdbsh9cat2iQ0CfxCsa11f5Q73MgDBF_Bp3oxkExbOic5lqs-mgitrq48z8y40wN_pZRSlvxUMnx8Quj_cAKJd6HqORGW6zFFrnM796GleQpbEpmT0UJE85G1OOVgPhW4QaVvZmWcqh4-qSw",
+            verified: true,
+            experience: "Mid-level",
+            availability: "Today",
+            languages: ["English", "Amharic"]
         }
     ];
+
+    // Filter Logic
+    const filteredProfessionals = professionals.filter(pro => {
+        const matchesPrice = pro.price >= priceMin && pro.price <= priceMax;
+        const matchesRating = pro.rating >= selectedRating;
+        const matchesVerified = verifiedOnly ? pro.verified : true;
+
+        const matchesExperience = selectedExperience.length === 0 || selectedExperience.some(exp =>
+            (exp === "Junior (1-2 yrs)" && pro.experience === "Junior") ||
+            (exp === "Mid-level (3-5 yrs)" && pro.experience === "Mid-level") ||
+            (exp === "Senior (5+ yrs)" && pro.experience === "Senior")
+        );
+
+        const matchesAvailability = selectedAvailability.length === 0 || selectedAvailability.includes(pro.availability);
+
+        const matchesLanguage = selectedLanguages.length === 0 || pro.languages.some(lang => selectedLanguages.includes(lang));
+
+        return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesAvailability && matchesLanguage;
+    });
+
+    const handleClearAll = () => {
+        setPriceMin(0);  // Reset to lower wide range
+        setPriceMax(10000);
+        setSelectedRating(0);
+        setSelectedExperience([]);
+        setVerifiedOnly(false);
+        setSelectedAvailability([]);
+        setSelectedLanguages([]);
+    };
+
+    const toggleFilter = (state: string[], setState: React.Dispatch<React.SetStateAction<string[]>>, value: string) => {
+        if (state.includes(value)) {
+            setState(state.filter(item => item !== value));
+        } else {
+            setState([...state, value]);
+        }
+    };
 
     return (
         <div className="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden bg-background-light dark:bg-background-dark font-display">
@@ -104,8 +178,8 @@ const SearchResults = () => {
                         <span className="material-symbols-outlined text-2xl">notifications</span>
                     </button>
                     <div
-                        className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
-                        style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuCZlXbxpChx-G9BObE2L_puROnPIAGdgiIwuvbLmqv-HcEC9rlgzLjltFz0uD9kiAwUVkiHGilGErtXtstjS1kUYEb5FQQ_Wn5YumD6ioEaA6cjFHZwsMcZHJTYYIMKhVzjwD_7_JIxsvfB93j6WIIlb87uh6iNK4_g5wX9w6l7CtSLf4lxv6Q2uhyh-_CdNzh_GsnkJV8IbgQijaGOaZvJPRetcY2KM5X74It1UdChltdidijlIZyMag3Wq5c-s4W_Me9rLE8waQ")' }}
+                        className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-border-color"
+                        style={{ backgroundImage: `url("${user?.profilePhoto || "https://randomuser.me/api/portraits/men/1.jpg"}")` }}
                     ></div>
                 </div>
             </header>
@@ -115,39 +189,74 @@ const SearchResults = () => {
                     <p className="text-text-primary dark:text-white text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em] min-w-72">
                         Professionals for 'Plumbing' in 'Addis Ababa'
                     </p>
+                    <p className="text-text-secondary dark:text-gray-400 self-end mb-1">
+                        Showing {filteredProfessionals.length} Result{filteredProfessionals.length !== 1 && 's'}
+                    </p>
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-8">
                     {/* FILTERS SIDEBAR */}
                     <aside className="w-full lg:w-1/4 xl:w-1/5">
-                        <div className="sticky top-28 bg-white dark:bg-background-dark p-6 rounded-lg shadow-card">
+                        <div className="sticky top-28 bg-white dark:bg-background-dark p-6 rounded-lg shadow-card max-h-[calc(100vh-8rem)] overflow-y-auto">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-text-primary dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Filters</h3>
-                                <button className="text-sm font-medium text-primary hover:underline">Clear All</button>
+                                <button onClick={handleClearAll} className="text-sm font-medium text-primary hover:underline">Clear All</button>
                             </div>
 
                             {/* Price Range */}
                             <div className="border-t border-border-color dark:border-white/10 pt-6">
-                                <h4 className="text-text-primary dark:text-white text-base font-bold leading-tight mb-4">Price Range</h4>
-                                <div className="@container">
-                                    <div className="relative flex w-full flex-col items-start justify-between gap-3">
-                                        <div className="flex h-[38px] w-full pt-1.5">
-                                            <div className="flex h-1.5 w-full rounded-full bg-border-color dark:bg-white/20 pl-[20%] pr-[30%]">
-                                                <div className="relative">
-                                                    <div className="absolute -left-3 -top-2 flex flex-col items-center gap-1.5">
-                                                        <div className="size-5 rounded-full bg-primary border-2 border-white dark:border-background-dark ring-1 ring-primary"></div>
-                                                        <p className="text-text-secondary dark:text-gray-400 text-sm font-normal leading-normal whitespace-nowrap">2500 ETB</p>
-                                                    </div>
-                                                </div>
-                                                <div className="h-1.5 flex-1 rounded-full bg-primary"></div>
-                                                <div className="relative">
-                                                    <div className="absolute -right-3 -top-2 flex flex-col items-center gap-1.5">
-                                                        <div className="size-5 rounded-full bg-primary border-2 border-white dark:border-background-dark ring-1 ring-primary"></div>
-                                                        <p className="text-text-secondary dark:text-gray-400 text-sm font-normal leading-normal whitespace-nowrap">10000 ETB</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                <h4 className="text-text-primary dark:text-white text-base font-bold leading-tight mb-4">Price Range (ETB)</h4>
+
+                                <div className="space-y-4">
+                                    <div className="relative h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 mt-2">
+                                        <div
+                                            className="absolute h-full bg-primary rounded-full"
+                                            style={{
+                                                left: `${(priceMin / 10000) * 100}%`,
+                                                right: `${100 - (priceMax / 10000) * 100}%`
+                                            }}
+                                        ></div>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="10000"
+                                            value={priceMin}
+                                            onChange={(e) => {
+                                                const val = Number(e.target.value);
+                                                if (val < priceMax) setPriceMin(val);
+                                            }}
+                                            className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
+                                            style={{ zIndex: priceMin > 5000 ? 10 : 1 }}
+                                        />
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="10000"
+                                            value={priceMax}
+                                            onChange={(e) => {
+                                                const val = Number(e.target.value);
+                                                if (val > priceMin) setPriceMax(val);
+                                            }}
+                                            className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            value={priceMin}
+                                            onChange={(e) => setPriceMin(Number(e.target.value))}
+                                            className="w-full rounded-md border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm py-2 px-3"
+                                            placeholder="Min"
+                                        />
+                                        <span className="text-gray-400">-</span>
+                                        <input
+                                            type="number"
+                                            value={priceMax}
+                                            onChange={(e) => setPriceMax(Number(e.target.value))}
+                                            className="w-full rounded-md border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm py-2 px-3"
+                                            placeholder="Max"
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -157,12 +266,34 @@ const SearchResults = () => {
                                 <h4 className="text-text-primary dark:text-white text-base font-bold leading-tight mb-4">Rating</h4>
                                 <div className="flex flex-col gap-3">
                                     <label className="flex items-center gap-3 cursor-pointer">
-                                        <input defaultChecked className="h-5 w-5 border-2 border-border-color dark:border-white/30 bg-transparent text-primary focus:ring-primary focus:ring-offset-0" name="rating-filter" type="radio" />
+                                        <input
+                                            name="rating-filter"
+                                            type="radio"
+                                            checked={selectedRating === 4}
+                                            onChange={() => setSelectedRating(4)}
+                                            className="h-5 w-5 border-2 border-border-color dark:border-white/30 bg-transparent text-primary focus:ring-primary focus:ring-offset-0"
+                                        />
                                         <div className="flex items-center gap-1"><span className="text-text-primary dark:text-white text-sm font-medium leading-normal">4★ and up</span></div>
                                     </label>
                                     <label className="flex items-center gap-3 cursor-pointer">
-                                        <input className="h-5 w-5 border-2 border-border-color dark:border-white/30 bg-transparent text-primary focus:ring-primary focus:ring-offset-0" name="rating-filter" type="radio" />
+                                        <input
+                                            name="rating-filter"
+                                            type="radio"
+                                            checked={selectedRating === 3}
+                                            onChange={() => setSelectedRating(3)}
+                                            className="h-5 w-5 border-2 border-border-color dark:border-white/30 bg-transparent text-primary focus:ring-primary focus:ring-offset-0"
+                                        />
                                         <div className="flex items-center gap-1"><span className="text-text-primary dark:text-white text-sm font-medium leading-normal">3★ and up</span></div>
+                                    </label>
+                                    <label className="flex items-center gap-3 cursor-pointer">
+                                        <input
+                                            name="rating-filter"
+                                            type="radio"
+                                            checked={selectedRating === 0}
+                                            onChange={() => setSelectedRating(0)}
+                                            className="h-5 w-5 border-2 border-border-color dark:border-white/30 bg-transparent text-primary focus:ring-primary focus:ring-offset-0"
+                                        />
+                                        <div className="flex items-center gap-1"><span className="text-text-primary dark:text-white text-sm font-medium leading-normal">Any</span></div>
                                     </label>
                                 </div>
                             </div>
@@ -171,18 +302,17 @@ const SearchResults = () => {
                             <div className="border-t border-border-color dark:border-white/10 pt-6 mt-6">
                                 <h4 className="text-text-primary dark:text-white text-base font-bold leading-tight mb-4">Experience Level</h4>
                                 <div className="flex flex-col gap-3">
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <input className="h-5 w-5 rounded border-border-color dark:border-white/30 text-primary focus:ring-primary" type="checkbox" />
-                                        <span className="text-text-primary dark:text-white text-sm">Junior (1-2 yrs)</span>
-                                    </label>
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <input className="h-5 w-5 rounded border-border-color dark:border-white/30 text-primary focus:ring-primary" type="checkbox" />
-                                        <span className="text-text-primary dark:text-white text-sm">Mid-level (3-5 yrs)</span>
-                                    </label>
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <input className="h-5 w-5 rounded border-border-color dark:border-white/30 text-primary focus:ring-primary" type="checkbox" />
-                                        <span className="text-text-primary dark:text-white text-sm">Senior (5+ yrs)</span>
-                                    </label>
+                                    {["Junior (1-2 yrs)", "Mid-level (3-5 yrs)", "Senior (5+ yrs)"].map((exp) => (
+                                        <label key={exp} className="flex items-center gap-3 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedExperience.includes(exp)}
+                                                onChange={() => toggleFilter(selectedExperience, setSelectedExperience, exp)}
+                                                className="h-5 w-5 rounded border-border-color dark:border-white/30 text-primary focus:ring-primary"
+                                            />
+                                            <span className="text-text-primary dark:text-white text-sm">{exp}</span>
+                                        </label>
+                                    ))}
                                 </div>
                             </div>
 
@@ -190,67 +320,80 @@ const SearchResults = () => {
                             <div className="border-t border-border-color dark:border-white/10 pt-6 mt-6">
                                 <label className="flex cursor-pointer items-center justify-between">
                                     <span className="text-text-primary dark:text-white text-base font-bold">Verified Professionals</span>
-                                    <input className="peer sr-only" type="checkbox" />
+                                    <input
+                                        type="checkbox"
+                                        className="peer sr-only"
+                                        checked={verifiedOnly}
+                                        onChange={(e) => setVerifiedOnly(e.target.checked)}
+                                    />
                                     <div className="relative h-6 w-11 rounded-full bg-gray-200 dark:bg-white/20 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 dark:after:border-gray-600 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800"></div>
                                 </label>
                             </div>
 
-                            <div className="mt-8">
-                                <button className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-primary text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] px-6 transition-colors hover:bg-primary/90">
-                                    Apply Filters
-                                </button>
+                            {/* Availability */}
+                            <div className="border-t border-border-color dark:border-white/10 pt-6 mt-6">
+                                <h4 className="text-text-primary dark:text-white text-base font-bold leading-tight mb-4">Availability</h4>
+                                <div className="flex flex-col gap-3">
+                                    {["Today", "This Week"].map((avail) => (
+                                        <label key={avail} className="flex items-center gap-3 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedAvailability.includes(avail)}
+                                                onChange={() => toggleFilter(selectedAvailability, setSelectedAvailability, avail)}
+                                                className="h-5 w-5 rounded border-border-color dark:border-white/30 text-primary focus:ring-primary"
+                                            />
+                                            <span className="text-text-primary dark:text-white text-sm">{avail}</span>
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
+
+                            {/* Languages */}
+                            <div className="border-t border-border-color dark:border-white/10 pt-6 mt-6">
+                                <h4 className="text-text-primary dark:text-white text-base font-bold leading-tight mb-4">Language</h4>
+                                <div className="flex flex-col gap-3">
+                                    {["English", "Amharic", "Oromiffa", "Tigrinya"].map((lang) => (
+                                        <label key={lang} className="flex items-center gap-3 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedLanguages.includes(lang)}
+                                                onChange={() => toggleFilter(selectedLanguages, setSelectedLanguages, lang)}
+                                                className="h-5 w-5 rounded border-border-color dark:border-white/30 text-primary focus:ring-primary"
+                                            />
+                                            <span className="text-text-primary dark:text-white text-sm">{lang}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
                         </div>
                     </aside>
 
                     {/* RESULTS LIST */}
                     <div className="w-full lg:w-3/4 xl:w-4/5">
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                            {professionals.map((pro) => (
-                                <div key={pro.id} className="flex flex-col overflow-hidden rounded-lg bg-white dark:bg-background-dark shadow-card transition-shadow hover:shadow-lg">
-                                    <div className="relative h-24 bg-background-light dark:bg-white/10">
-                                        <div className="absolute left-1/2 top-full -translate-x-1/2 -translate-y-1/2 transform">
-                                            <img
-                                                alt={`Photo of ${pro.name}`}
-                                                className="size-24 rounded-full object-cover border-4 border-white dark:border-background-dark shadow-md"
-                                                src={pro.image}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-1 flex-col p-5 pt-16 text-center">
-                                        <h3 className="text-lg font-bold text-text-primary dark:text-white">{pro.name}</h3>
-                                        <p className="text-sm text-text-secondary dark:text-gray-400 mt-0.5">{pro.role}</p>
-                                        <div className="mt-2 flex items-center justify-center gap-1">
-                                            <span className="material-symbols-outlined text-xl text-yellow-500" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                                            <span className="text-sm font-semibold text-text-primary dark:text-white">{pro.rating}</span>
-                                        </div>
-                                        <p className="text-sm text-text-secondary dark:text-gray-400 mt-3 flex-grow">"{pro.quote}"</p>
-                                        <p className="text-base font-bold text-text-primary dark:text-white mt-4">
-                                            <span className="font-normal text-text-secondary">Starting from</span> {pro.price} ETB
-                                        </p>
-                                        <div className="mt-5 flex items-center gap-3">
-                                            <button className="flex flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 bg-primary text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] px-4 transition-colors hover:bg-primary/90">
-                                                Book Now
-                                            </button>
-                                            <button className="flex flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 bg-background-light dark:bg-white/10 text-text-primary dark:text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] px-4 transition-colors hover:bg-gray-200 dark:hover:bg-white/20">
-                                                View Profile
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                        {filteredProfessionals.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {filteredProfessionals.map((pro) => (
+                                    <ProfessionalCard key={pro.id} pro={pro} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center p-12 text-center bg-white dark:bg-background-dark rounded-xl shadow-sm">
+                                <span className="material-symbols-outlined text-gray-300 text-6xl mb-4">search_off</span>
+                                <h3 className="text-lg font-bold text-text-primary dark:text-white">No professionals found</h3>
+                                <p className="text-text-secondary dark:text-gray-400 mt-2">Try adjusting your filters to see more results.</p>
+                                <button onClick={handleClearAll} className="mt-6 text-primary font-bold hover:underline">Clear Filters</button>
+                            </div>
+                        )}
 
-                        {/* Pagination */}
+                        {/* Pagination (Mock) */}
                         <nav aria-label="Pagination" className="mt-10 flex items-center justify-center gap-2">
                             <button className="flex h-10 w-10 items-center justify-center rounded-lg text-text-secondary dark:text-gray-400 bg-white dark:bg-background-dark shadow-card hover:bg-background-light dark:hover:bg-white/10">
                                 <span className="material-symbols-outlined">chevron_left</span>
                             </button>
                             <button className="flex h-10 w-10 items-center justify-center rounded-lg text-white bg-primary shadow-card">1</button>
                             <button className="flex h-10 w-10 items-center justify-center rounded-lg text-text-secondary dark:text-gray-400 bg-white dark:bg-background-dark shadow-card hover:bg-background-light dark:hover:bg-white/10">2</button>
-                            <button className="flex h-10 w-10 items-center justify-center rounded-lg text-text-secondary dark:text-gray-400 bg-white dark:bg-background-dark shadow-card hover:bg-background-light dark:hover:bg-white/10">3</button>
-                            <span className="text-text-secondary dark:text-gray-400">...</span>
-                            <button className="flex h-10 w-10 items-center justify-center rounded-lg text-text-secondary dark:text-gray-400 bg-white dark:bg-background-dark shadow-card hover:bg-background-light dark:hover:bg-white/10">10</button>
+                            {/* ... more pages ... */}
                             <button className="flex h-10 w-10 items-center justify-center rounded-lg text-text-secondary dark:text-gray-400 bg-white dark:bg-background-dark shadow-card hover:bg-background-light dark:hover:bg-white/10">
                                 <span className="material-symbols-outlined">chevron_right</span>
                             </button>

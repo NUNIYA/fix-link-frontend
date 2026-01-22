@@ -45,9 +45,9 @@ function App() {
         <Route
           path="/customer/search"
           element={
-
-            <SearchResults />
-
+            <ProtectedRoute role="customer">
+              <SearchResults />
+            </ProtectedRoute>
           }
         />
         <Route
