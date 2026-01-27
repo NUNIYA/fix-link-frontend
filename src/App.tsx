@@ -7,10 +7,11 @@ import CustomerRegister from "./pages/auth/customer/CustomerRegister";
 import ProfessionalRegister from "./pages/auth/professional/ProfessionalRegister";
 import CustomerHome from "./pages/auth/customer/CustomerHome";
 import SearchResults from "./pages/auth/customer/SearchResults";
+import ProfessionalProfile from "./pages/auth/customer/ProfessionalProfile";
+import CustomerMessages from "./pages/auth/customer/CustomerMessages";
 import ProfessionalHome from "./pages/auth/professional/ProfessionalHome"
 import LoginPage from "./pages/auth/login";
 import ForgotPassword from "./pages/auth/login/ForgotPassword";
-import ResetPassword from "./pages/auth/login/ResetPassword";
 import PendingApproval from "./pages/signup/PendingApproval";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -31,25 +32,32 @@ function App() {
         {/* Login & Recovery */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Dashboards */}
         <Route
           path="/customer/home"
           element={
-            <ProtectedRoute role="customer">
-              <CustomerHome />
-            </ProtectedRoute>
+
+            <CustomerHome />
+
           }
         />
         <Route
           path="/customer/search"
           element={
-            <ProtectedRoute role="customer">
-              <SearchResults />
-            </ProtectedRoute>
+
+            <SearchResults />
+
           }
         />
+        <Route path="/customer/profile/:id" element={
+          <ProfessionalProfile />
+        } />
+
+        <Route path="/customer/messages/:id" element={
+          <CustomerMessages />
+        } />
+
         <Route
           path="/professional/home"
           element={

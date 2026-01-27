@@ -196,7 +196,7 @@ export const loginUser = async (email: string, password: string) => {
  */
 export const forgotPassword = async (email: string) => {
   await fakeDelay(1000);
-  console.log(`Sending reset password email to ${email}`);
+  console.log(`Sending reset password email to ${email}. OTP: 598195`);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
@@ -207,12 +207,22 @@ export const forgotPassword = async (email: string) => {
 };
 
 /**
+ * Verify Forgot Password OTP (MOCK)
+ */
+export const verifyForgotPasswordOtp = async (email: string, otp: string) => {
+  await fakeDelay(1000);
+  if (otp !== "598195") {
+    throw new Error("Invalid verification code");
+  }
+  return { success: true, message: "OTP verified" };
+};
+
+/**
  * Reset Password (MOCK)
  */
-export const resetPassword = async (token: string, newPassword: string) => {
+export const resetPassword = async (email: string, newPassword: string) => {
   await fakeDelay(1000);
-  console.log(`Resetting password with token ${token} to ${newPassword}`);
-  if (!token) throw new Error("Invalid token");
+  console.log(`Resetting password for ${email} to ${newPassword}`);
   if (!newPassword) throw new Error("New password is required");
   return { success: true, message: "Password reset successfully" };
 };
