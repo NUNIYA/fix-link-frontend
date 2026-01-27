@@ -1,13 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import CustomerNavbar from './components/CustomerNavbar';
 import CustomerFooter from './components/CustomerFooter';
+import RequestEstimateModal from './components/RequestEstimateModal';
 
 const ProfessionalProfile = () => {
     const navigate = useNavigate();
+    const [isEstimateModalOpen, setIsEstimateModalOpen] = useState(false);
 
     const handleChat = () => {
         navigate('/customer/messages/1');
+    };
+
+    const handleEstimateRequest = () => {
+        setIsEstimateModalOpen(true);
     };
 
     // Mock Data (In a real app, this would come from an API based on the ID)
@@ -80,7 +86,10 @@ const ProfessionalProfile = () => {
                                     </div>
                                 </div>
                                 <div className="flex w-full md:w-auto items-center gap-3 mt-6 md:mt-0">
-                                    <button className="flex-1 md:flex-auto flex h-12 items-center justify-center rounded-xl bg-primary px-8 text-base font-bold text-white shadow-lg hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-95">
+                                    <button
+                                        onClick={handleEstimateRequest}
+                                        className="flex-1 md:flex-auto flex h-12 items-center justify-center rounded-xl bg-primary px-8 text-base font-bold text-white shadow-lg hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-95"
+                                    >
                                         <span>Request Estimate</span>
                                     </button>
                                     <button onClick={handleChat} className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-primary hover:border-primary transition-all">
@@ -274,10 +283,15 @@ const ProfessionalProfile = () => {
                         </section>
                     </div>
                 </div>
-
             </main>
 
             <CustomerFooter />
+
+            <RequestEstimateModal
+                isOpen={isEstimateModalOpen}
+                onClose={() => setIsEstimateModalOpen(false)}
+                professionalName={professional.name}
+            />
         </div>
     );
 };
