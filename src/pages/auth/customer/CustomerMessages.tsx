@@ -36,14 +36,14 @@ const CustomerMessages = () => {
     const [messageInput, setMessageInput] = useState("");
 
     return (
-        <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark font-display text-text-primary dark:text-white">
+        <div className="flex flex-col h-screen bg-background-light dark:bg-background-dark font-display text-text-primary dark:text-white overflow-hidden">
             <CustomerNavbar />
 
-            <main className="flex flex-col xl:flex-row w-full max-w-[1440px] mx-auto px-4 md:px-10 py-6 gap-6 items-start flex-1">
+            <main className="flex flex-col xl:flex-row w-full max-w-[1440px] mx-auto px-4 md:px-10 py-6 gap-6 flex-1 overflow-hidden items-stretch">
                 {/* Left Column: Messaging */}
-                <div className="flex flex-col flex-1 w-full bg-white dark:bg-card-dark rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 relative z-0 h-[calc(100vh-140px)] min-h-[600px]">
-                    {/* Chat Sticky Header */}
-                    <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-card-dark z-10 rounded-t-xl">
+                <div className="flex flex-col flex-1 w-full bg-white dark:bg-card-dark rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 relative z-0 h-full overflow-hidden">
+                    {/* Chat Header */}
+                    <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-card-dark z-10">
                         <div className="flex items-center gap-4">
                             <div className="relative">
                                 <div
@@ -85,8 +85,8 @@ const CustomerMessages = () => {
 
                                 <div className={`flex flex-col gap-1.5 ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
                                     <div className={`text-sm font-normal leading-relaxed rounded-xl px-4 py-3 ${msg.sender === 'user'
-                                            ? 'rounded-br-none bg-primary text-white'
-                                            : 'rounded-bl-none bg-slate-100 dark:bg-slate-800 text-text-primary dark:text-white'
+                                        ? 'rounded-br-none bg-primary text-white'
+                                        : 'rounded-bl-none bg-slate-100 dark:bg-slate-800 text-text-primary dark:text-white'
                                         }`}>
                                         {msg.text}
                                     </div>
@@ -125,7 +125,7 @@ const CustomerMessages = () => {
                 </div>
 
                 {/* Right Column: Job Status */}
-                <div className="w-full xl:w-[350px] flex flex-col gap-6 shrink-0 xl:h-[calc(100vh-140px)] xl:overflow-y-auto">
+                <div className="w-full xl:w-[350px] flex flex-col gap-6 shrink-0 h-full overflow-y-auto pr-2 custom-scrollbar">
                     {/* Job Summary Card */}
                     <div className="bg-white dark:bg-card-dark rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
                         <div className="flex items-start justify-between mb-4">
