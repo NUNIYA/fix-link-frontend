@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useMockService } from "../../../../context/MockServiceContext";
+import { useAuth } from "../../../../context/AuthContext";
 
 const LOCATIONS = [
     "Addis Ababa",
@@ -20,7 +22,10 @@ interface RequestEstimateModalProps {
 }
 
 const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onClose, professionalName }) => {
+    const { addRequest } = useMockService();
+    const { user } = useAuth();
     const [description, setDescription] = useState("");
+    const [preferredDate, setPreferredDate] = useState("");
     const [location, setLocation] = useState("");
     const [budget, setBudget] = useState("");
     const [photos, setPhotos] = useState<string[]>([]);
@@ -78,12 +83,23 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
         loc.toLowerCase().includes(location.toLowerCase())
     );
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Simulate sending request
-        console.log("Sending estimate request:", { description, location, budget, photos });
+
+        await addRequest({
+            customerId: user?.id || "mock-customer-id",
+            customerName: user?.name || "Mock Customer",
+            professionalId: professionalName, // Using name as ID for mock logic
+            professionalName: professionalName,
+            professionalImage: "https://lh3.googleusercontent.com/aida-public/AB6AXuCPPJ8U1L7qqaItFyqmJpq01IwDDIKxUNRCjpZtm8UeeaiggSa5exgEkguPz4Yq8E106veihs9TVUGq63QMTja3KkjqviTfiHrA9dDjMs4sd7XEND8aLMrdhFU6_ISeqDozTdyTTcHgNtOhjzmpsXqGcNvEmLDe-yDtAxSbV0iGwCD0woh4ljIFLma4mrh3nflxCgTJza0CerSP477c9RKCQVF31SGcEakU0oKvfaQTZ_9aOtcTmBI8CyUTGI094pt3J23lhoN_nQ", // Generic mock pro image
+            description,
+            preferredDate,
+            location,
+            budget,
+            photos
+        });
+
         setIsSubmitted(true);
-        // We'll keep the modal open to show the success message
     };
 
     const handleResetAndClose = () => {
@@ -91,6 +107,7 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
         setDescription("");
         setLocation("");
         setBudget("");
+        setPreferredDate("");
         setPhotos([]);
         onClose();
     };
@@ -155,6 +172,22 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
                                     placeholder="Describe your project, e.g., 'Fixing a leaky kitchen faucet and replacing the bathroom showerhead...'"
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Preferred Date */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-text-primary dark:text-white flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-primary text-lg">calendar_month</span>
+                                    When do you want this done?
+                                </label>
+                                <input
+                                    required
+                                    type="date"
+                                    className="w-full p-4 rounded-xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-text-primary dark:text-white focus:border-primary focus:ring-0 transition-all text-sm"
+                                    value={preferredDate}
+                                    onChange={(e) => setPreferredDate(e.target.value)}
+                                    min={new Date().toISOString().split('T')[0]} // Encourage future dates
                                 />
                             </div>
 

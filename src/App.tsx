@@ -10,10 +10,10 @@ import SearchResults from "./pages/auth/customer/SearchResults";
 import ProfessionalProfile from "./pages/auth/customer/ProfessionalProfile";
 import CustomerMessages from "./pages/auth/customer/CustomerMessages";
 import ProfessionalHome from "./pages/auth/professional/ProfessionalHome"
+import ProfessionalMessages from "./pages/auth/professional/ProfessionalMessages";
 import LoginPage from "./pages/auth/login";
 import ForgotPassword from "./pages/auth/login/ForgotPassword";
 import PendingApproval from "./pages/signup/PendingApproval";
-import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -61,9 +61,15 @@ function App() {
         <Route
           path="/professional/home"
           element={
-            <ProtectedRoute role="professional">
-              <ProfessionalHome />
-            </ProtectedRoute>
+
+            <ProfessionalHome />
+
+          }
+        />
+        <Route
+          path="/professional/messages"
+          element={
+            <ProfessionalMessages />
           }
         />
 

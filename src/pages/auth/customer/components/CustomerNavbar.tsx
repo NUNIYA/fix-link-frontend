@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
+import { useMockService } from "../../../../context/MockServiceContext";
 
 const LOCATIONS = [
   "Addis Ababa",
@@ -17,13 +18,17 @@ const LOCATIONS = [
 
 const CustomerNavbar = () => {
   const { user, logout } = useAuth();
+  const { notifications, markNotificationAsRead } = useMockService();
   const navigate = useNavigate();
 
   // Search State
   const [location, setLocation] = useState("Addis Ababa");
   const [service, setService] = useState("All Services");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const suggestionRef = useRef<HTMLDivElement>(null);
+
+  const unreadNotifications = notifications.filter(n => (n.userId === user?.id || n.userId === user?.name) && !n.isRead);
 
   const handleLogout = () => {
     logout();
@@ -61,6 +66,14 @@ const CustomerNavbar = () => {
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-bold text-white shadow-sm">F</div>
           <span className="text-lg font-bold tracking-tight hidden xl:block text-text-primary dark:text-white">Fix-Link</span>
         </div>
+
+        {/* DEV ONLY ROLE SWITCHER */}
+        <button
+          onClick={() => navigate('/professional/home')}
+          className="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded border border-amber-200 hover:bg-amber-200 transition-colors hidden md:block"
+        >
+          SWITCH TO PRO (DEV)
+        </button>
       </div>
 
       {/* Search Bar - Keeping the one we added but wrapping it similarly or adjusting if needed. 
@@ -146,11 +159,51 @@ const CustomerNavbar = () => {
           <span className="material-symbols-outlined text-xl">calendar_month</span>
           <span>Bookings</span>
         </a>
-        <button className="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-transparent text-text-primary dark:text-white hover:bg-background-light dark:hover:bg-white/10 transition-colors">
-          <span className="material-symbols-outlined text-2xl">notifications</span>
-          {/* Notification Dot */}
-          <span className="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 hidden"></span>
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-transparent text-text-primary dark:text-white hover:bg-background-light dark:hover:bg-white/10 transition-colors relative"
+          >
+            <span className="material-symbols-outlined text-2xl">notifications</span>
+            {unreadNotifications.length > 0 && (
+              <span className="absolute top-2 right-2 w-4 h-4 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 text-[10px] text-white flex items-center justify-center font-bold">
+                {unreadNotifications.length}
+              </span>
+            )}
+          </button>
+
+          {showNotifications && (
+            <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden z-[60]">
+              <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                <span className="font-bold text-sm text-text-primary dark:text-white">Notifications</span>
+                <span className="text-xs text-primary font-medium">{unreadNotifications.length} New</span>
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.filter(n => n.userId === user?.id || n.userId === user?.name).length === 0 ? (
+                  <div className="px-4 py-8 text-center text-gray-500 text-sm">No notifications yet</div>
+                ) : (
+                  notifications.filter(n => n.userId === user?.id || n.userId === user?.name).map(n => (
+                    <div
+                      key={n.id}
+                      className={`px-4 py-3 border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5' : ''}`}
+                      onClick={() => {
+                        markNotificationAsRead(n.id);
+                        setShowNotifications(false);
+                        navigate(`/customer/messages/1`);
+                      }}
+                    >
+                      <p className={`text-sm ${!n.isRead ? 'font-bold text-text-primary dark:text-white' : 'font-medium text-text-secondary dark:text-gray-400'}`}>{n.message}</p>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-[10px] text-gray-400">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="text-[10px] text-primary font-bold">View →</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Profile Dropdown Trigger */}
         <div className="relative group">
