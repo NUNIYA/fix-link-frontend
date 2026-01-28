@@ -221,13 +221,32 @@ const CustomerNavbar = () => {
               <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
             </div>
 
-            <button
-              onClick={handleLogout}
-              className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-lg">logout</span>
-              Sign Out
-            </button>
+            <div className="py-1">
+              <Link
+                to={`/customer/profile/${user?.id || 'me'}`}
+                className="flex items-center gap-2 px-4 py-3 text-sm text-text-primary dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">person</span>
+                View Profile
+              </Link>
+              <Link
+                to="/account-settings"
+                className="flex items-center gap-2 px-4 py-3 text-sm text-text-primary dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">settings</span>
+                Account Settings
+              </Link>
+            </div>
+
+            <div className="border-t border-gray-100 dark:border-gray-700 py-1">
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-lg">logout</span>
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
       </div>

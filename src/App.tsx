@@ -14,6 +14,7 @@ import ProfessionalMessages from "./pages/auth/professional/ProfessionalMessages
 import LoginPage from "./pages/auth/login";
 import ForgotPassword from "./pages/auth/login/ForgotPassword";
 import PendingApproval from "./pages/signup/PendingApproval";
+import AccountSettings from "./pages/auth/customer/AccountSettings";
 
 function App() {
   return (
@@ -80,6 +81,7 @@ function App() {
         />
 
         <Route path="/signup/pending-approval" element={<PendingApproval />} />
+        <Route path="/account-settings" element={<AccountSettings />} />
 
       </Routes>
     </BrowserRouter>
