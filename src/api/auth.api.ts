@@ -21,6 +21,37 @@ api.interceptors.request.use((config) => {
 });
 
 /**
+ * Helper to parse backend errors
+ */
+const parseError = (error: any): string => {
+  if (error.response?.data) {
+    const data = error.response.data;
+
+    // 1. If it's a "detail" string (generic)
+    if (typeof data.detail === "string") return data.detail;
+
+    // 2. If it's a "detail" object or list (specific fields)
+    if (data.detail && typeof data.detail === "object") {
+      return Object.entries(data.detail)
+        .map(([field, msg]) => `${field}: ${Array.isArray(msg) ? msg[0] : msg}`)
+        .join(" | ");
+    }
+
+    // 3. Handle standard DRF field errors (errors in root object)
+    const errorEntries = Object.entries(data);
+    if (errorEntries.length > 0) {
+      return errorEntries
+        .map(([field, msg]) => {
+          if (field === "non_field_errors") return Array.isArray(msg) ? msg[0] : msg;
+          return `${field}: ${Array.isArray(msg) ? msg[0] : msg}`;
+        })
+        .join(" | ");
+    }
+  }
+  return "Something went wrong. Please try again.";
+};
+
+/**
  * Register user
  */
 export const registerUser = async (role: Role, formData: Record<string, any>) => {
@@ -33,6 +64,13 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
       last_name: formData.lastName,
       phonenumber: formData.phone,
       role: role,
+      // Pass other fields only if they exist (simplification for professional)
+      ...(formData.serviceCategory && { profession: formData.serviceCategory }),
+      ...(formData.yearsOfExperience && { years_of_experience: Number(formData.yearsOfExperience) }),
+      ...(formData.shortBio && { bio: formData.shortBio }),
+      ...(formData.location && { location: formData.location }),
+      ...(formData.payoutMethod && { payout_method: formData.payoutMethod }),
+      ...(formData.accountNumber && { account_number: formData.accountNumber }),
     };
 
     const response = await api.post("/accounts/users/register/", payload);
@@ -43,7 +81,7 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
       refresh: response.data.refresh,
     };
   } catch (error: any) {
-    throw new Error(error.response?.data?.detail || error.response?.data?.error || "Registration failed");
+    throw new Error(parseError(error));
   }
 };
 
@@ -64,7 +102,7 @@ export const loginUser = async (email: string, password: string) => {
       refresh: response.data.refresh,
     };
   } catch (error: any) {
-    throw new Error(error.response?.data?.detail || "Invalid credentials");
+    throw new Error(error.response?.data?.detail || error.response?.data?.error || "Invalid credentials");
   }
 };
 

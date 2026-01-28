@@ -54,7 +54,6 @@ const ProfessionalProfile = () => {
     const [profileAbout, setProfileAbout] = useState("");
     const [profileSkills, setProfileSkills] = useState("");
     const [profileExperience, setProfileExperience] = useState("");
-    const [profileRate, setProfileRate] = useState("");
     const [profileLocation, setProfileLocation] = useState("");
     const [profileLanguages, setProfileLanguages] = useState<string[]>([]);
     const [profilePortfolio, setProfilePortfolio] = useState<{ img: string; title: string }[]>([]);
@@ -68,7 +67,6 @@ const ProfessionalProfile = () => {
             setProfileAbout(user.bio || "With over 12 years of experience...");
             setProfileSkills(user.skills || "Residential Wiring, Commercial Systems, Smart Home Setup");
             setProfileExperience(user.years_of_experience?.toString() || "12");
-            setProfileRate(user.hourlyRate || "450");
             setProfileLocation(user.city && user.subcity ? `${user.city}, ${user.subcity}` : "Addis Ababa, Bole");
             setProfileLanguages(user.languages || ["Amharic (Native)", "English (Fluent)"]);
             setProfilePortfolio(user.portfolio || [
@@ -82,7 +80,6 @@ const ProfessionalProfile = () => {
             setProfileAbout("With over 12 years of experience serving the Addis Ababa metropolitan area, I specialize in high-end residential wiring, commercial energy systems, and modern smart home integrations.");
             setProfileSkills("Residential Wiring, Commercial Systems, Smart Home Setup");
             setProfileExperience("12");
-            setProfileRate("450");
             setProfileLocation("Addis Ababa, Bole");
             setProfileLanguages(["Amharic (Native)", "English (Fluent)"]);
             setProfilePortfolio([
@@ -103,7 +100,6 @@ const ProfessionalProfile = () => {
                     bio: profileAbout,
                     skills: profileSkills,
                     years_of_experience: parseInt(profileExperience),
-                    hourlyRate: profileRate,
                     city: city || profileLocation,
                     subcity: subcity || "",
                     languages: profileLanguages,
@@ -215,14 +211,6 @@ const ProfessionalProfile = () => {
                                                         <input type="text" value={profileExperience} onChange={(e) => setProfileExperience(e.target.value)} className="w-12 bg-slate-50 dark:bg-slate-800 border-b border-primary outline-none" />
                                                     ) : (
                                                         <span>{profileExperience}+ years experience</span>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-1.5 font-bold text-primary">
-                                                    <span className="material-symbols-outlined text-base">payments</span>
-                                                    {isEditing ? (
-                                                        <input type="text" value={profileRate} onChange={(e) => setProfileRate(e.target.value)} className="w-16 bg-slate-50 dark:bg-slate-800 border-b border-primary outline-none" />
-                                                    ) : (
-                                                        <span>{profileRate} ETB/hr</span>
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-1.5 flex-1 max-w-md">

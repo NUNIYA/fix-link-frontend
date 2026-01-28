@@ -40,18 +40,11 @@ const ProfessionalRegister = () => {
     password: "",
     confirmPassword: "",
     location: "",
-    paymentType: "perHour",
-    hourlyRate: "",
-    packages: [] as { title: string; price: string }[],
   });
 
   // File states
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
-  const [nationalIdFront, setNationalIdFront] = useState<File | null>(null);
-  const [nationalIdBack, setNationalIdBack] = useState<File | null>(null);
   const [cvFile, setCvFile] = useState<File | null>(null);
-  const [selfPicture, setSelfPicture] = useState<File | null>(null);
-  const [finNumber, setFinNumber] = useState("");
 
   // UI states
   const [showPassword, setShowPassword] = useState(false);
@@ -94,9 +87,6 @@ const ProfessionalRegister = () => {
 
           switch (name) {
             case "profilePhoto": setProfilePhoto(file); break;
-            case "nationalIdFront": setNationalIdFront(file); break;
-            case "nationalIdBack": setNationalIdBack(file); break;
-            case "selfPicture": setSelfPicture(file); break;
           }
         }
       } else {
@@ -120,25 +110,9 @@ const ProfessionalRegister = () => {
     );
   };
 
-  // Package helpers
-  const addPackage = () => {
-    setForm({ ...form, packages: [...form.packages, { title: "", price: "" }] });
-  };
-
-  const removePackage = (index: number) => {
-    const updated = form.packages.filter((_, i) => i !== index);
-    setForm({ ...form, packages: updated });
-  };
-
-  const updatePackage = (index: number, field: "title" | "price", value: string) => {
-    const updated = form.packages.map((pkg, i) =>
-      i === index ? { ...pkg, [field]: value } : pkg
-    );
-    setForm({ ...form, packages: updated });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
 
     // Required fields
@@ -167,27 +141,8 @@ const ProfessionalRegister = () => {
       }
     }
 
-    // Payment validation
-    if (form.paymentType === "perHour") {
-      if (!form.hourlyRate) {
-        setError("Please enter your hourly rate");
-        return;
-      }
-    } else {
-      if (form.packages.length === 0) {
-        setError("Please add at least one package");
-        return;
-      }
-      for (const pkg of form.packages) {
-        if (!pkg.title || !pkg.price) {
-          setError("All package descriptions and prices are required");
-          return;
-        }
-      }
-    }
-
-    if (!profilePhoto || !nationalIdFront || !nationalIdBack || !cvFile || !selfPicture || !finNumber) {
-      setError("All verification documents are required");
+    if (!profilePhoto || !cvFile) {
+      setError("Please upload both a profile photo and your CV/Resume");
       return;
     }
 
@@ -220,7 +175,6 @@ const ProfessionalRegister = () => {
       await registerUser("professional", {
         ...form,
         email,
-        finNumber,
       });
       // if (response.status === "ACTIVE") {
       //   login(response.token, response.user); // Auto-login if backend approves immediately
@@ -478,125 +432,13 @@ const ProfessionalRegister = () => {
             </div>
           </section>
 
-          {/* Payment */}
-          <section className="space-y-4">
-            <h2 className="text-xl font-bold border-b pb-3">E. Payment *</h2>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="paymentType"
-                  value="perHour"
-                  checked={form.paymentType === "perHour"}
-                  onChange={(e) => setForm({ ...form, paymentType: e.target.value })}
-                />
-                Per Hour
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="paymentType"
-                  value="package"
-                  checked={form.paymentType === "package"}
-                  onChange={(e) => setForm({ ...form, paymentType: e.target.value })}
-                />
-                Package
-              </label>
-            </div>
-
-            {/* Per Hour */}
-            {form.paymentType === "perHour" && (
-              <input
-                type="number"
-                placeholder="Hourly Rate ETB"
-                value={form.hourlyRate}
-                onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })}
-                className="form-input h-12 w-64"
-                required
-              />
-            )}
-
-            {/* Package */}
-            {form.paymentType === "package" && (
-              <div className="space-y-4">
-                {form.packages.map((pkg, index) => (
-                  <div key={index} className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-700 flex flex-col md:flex-row gap-4 items-start">
-                    <textarea
-                      placeholder="Package description (e.g., 'Clean whole house')"
-                      value={pkg.title}
-                      onChange={(e) => updatePackage(index, "title", e.target.value)}
-                      className="form-textarea flex-1 h-24 resize-none p-2 rounded-lg border border-gray-300 dark:border-gray-600"
-                      required
-                    />
-                    <input
-                      type="number"
-                      placeholder="Price ETB"
-                      value={pkg.price}
-                      onChange={(e) => updatePackage(index, "price", e.target.value)}
-                      className="form-input w-32 h-12 rounded-lg"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removePackage(index)}
-                      className="text-red-500 font-bold text-2xl self-start md:self-center mt-2 md:mt-0"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={addPackage}
-                  className="flex items-center gap-2 text-primary font-medium mt-2"
-                >
-                  <span className="text-xl">+</span> Add Package
-                </button>
-
-                {/* Live Preview */}
-                <div className="mt-4">
-                  <h3 className="font-semibold mb-2 text-lg">Preview:</h3>
-                  <div className="space-y-2">
-                    {form.packages.map((pkg, index) => (
-                      <div
-                        key={index}
-                        className="border rounded-lg p-3 bg-white dark:bg-gray-800 flex justify-between items-start shadow-sm"
-                      >
-                        <div>
-                          <p className="font-semibold text-gray-800 dark:text-gray-100">{pkg.title || "Package description"}</p>
-                          <p className="text-gray-500 dark:text-gray-300">Price: {pkg.price ? `${pkg.price} ETB` : "0 ETB"}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-
           {/* Verification */}
           <section className="space-y-6">
             <h2 className="text-xl font-bold border-b pb-3">C. Verification Documents *</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="flex flex-col md:col-span-2">
-                <span className="font-medium pb-1">FIN Number *</span>
-                <input type="text" value={finNumber} onChange={(e) => setFinNumber(e.target.value)} className="form-input h-12" required />
-              </label>
-              <label className="flex flex-col">
-                <span className="font-medium pb-1">National ID (Front) *</span>
-                <input type="file" name="nationalIdFront" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
-              </label>
-              <label className="flex flex-col">
-                <span className="font-medium pb-1">National ID (Back) *</span>
-                <input type="file" name="nationalIdBack" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
-              </label>
+            <div className="grid grid-cols-1 gap-4">
               <label className="flex flex-col">
                 <span className="font-medium pb-1">CV / Resume *</span>
                 <input type="file" name="cvFile" onChange={handleChange} className="form-input" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
-              </label>
-              <label className="flex flex-col md:col-span-2">
-                <span className="font-medium pb-1">Picture of Yourself *</span>
-                <input type="file" name="selfPicture" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
               </label>
             </div>
           </section>
@@ -633,6 +475,7 @@ const ProfessionalRegister = () => {
               </label>
             </div>
           </section>
+
 
           {error && <ErrorMessage message={error} />}
           {success && <SuccessMessage message={success} />}

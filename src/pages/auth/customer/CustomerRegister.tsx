@@ -66,6 +66,7 @@ const CustomerRegister = () => {
   // registerUser is imported from api/auth.api
 
   const handleSubmit = async () => {
+    if (loading) return;
     setError(null);
 
     // 1. Validation Logic
