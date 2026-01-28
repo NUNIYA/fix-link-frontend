@@ -57,8 +57,8 @@ const ProfessionalRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [success] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   // Handle input changes
   const handleChange = (
@@ -217,7 +217,7 @@ const ProfessionalRegister = () => {
     setError(null);
 
     try {
-      const response = await registerUser("professional", {
+      await registerUser("professional", {
         ...form,
         email,
         finNumber,

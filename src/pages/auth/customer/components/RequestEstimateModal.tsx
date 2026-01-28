@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useMockService } from "../../../../context/MockServiceContext";
+import { createJob } from "../../../../api/jobs.api";
 import { useAuth } from "../../../../context/AuthContext";
 
 const LOCATIONS = [
@@ -22,7 +22,6 @@ interface RequestEstimateModalProps {
 }
 
 const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onClose, professionalName }) => {
-    const { addRequest } = useMockService();
     const { user } = useAuth();
     const [description, setDescription] = useState("");
     const [preferredDate, setPreferredDate] = useState("");
@@ -86,20 +85,21 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        await addRequest({
-            customerId: user?.id || "mock-customer-id",
-            customerName: user?.name || "Mock Customer",
-            professionalId: professionalName, // Using name as ID for mock logic
-            professionalName: professionalName,
-            professionalImage: "https://lh3.googleusercontent.com/aida-public/AB6AXuCPPJ8U1L7qqaItFyqmJpq01IwDDIKxUNRCjpZtm8UeeaiggSa5exgEkguPz4Yq8E106veihs9TVUGq63QMTja3KkjqviTfiHrA9dDjMs4sd7XEND8aLMrdhFU6_ISeqDozTdyTTcHgNtOhjzmpsXqGcNvEmLDe-yDtAxSbV0iGwCD0woh4ljIFLma4mrh3nflxCgTJza0CerSP477c9RKCQVF31SGcEakU0oKvfaQTZ_9aOtcTmBI8CyUTGI094pt3J23lhoN_nQ", // Generic mock pro image
-            description,
-            preferredDate,
-            location,
-            budget,
-            photos
-        });
+        try {
+            await createJob({
+                title: description.split('\n')[0].substring(0, 50) || "Job Request",
+                description: description,
+                budget: parseFloat(budget.replace(/[^0-9.]/g, '')),
+                location: location,
+                preferred_date: preferredDate,
+                customer: user?.id,
+                // professional: professionalId // We need the ID, but for now we follow the existing component logic
+            } as any);
 
-        setIsSubmitted(true);
+            setIsSubmitted(true);
+        } catch (err: any) {
+            alert(err.message || "Failed to submit request");
+        }
     };
 
     const handleResetAndClose = () => {

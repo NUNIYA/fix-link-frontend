@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { forgotPassword, verifyForgotPasswordOtp, resetPassword } from "../../../api/auth.api";
+import { forgotPassword, resetPassword } from "../../../api/auth.api";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 import ErrorMessage from "../../../components/ErrorMessage";
 
@@ -72,8 +72,8 @@ const ForgotPassword = () => {
         }
     };
 
-    // Step 2: Verify OTP
-    const handleOtpSubmit = async (e?: React.FormEvent) => {
+    // Step 2: Proceed to step 3
+    const handleOtpSubmit = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
 
         const code = otp.join("");
@@ -83,15 +83,8 @@ const ForgotPassword = () => {
         }
 
         setError(null);
-        setLoading(true);
-        try {
-            await verifyForgotPasswordOtp(email, code);
-            setStep(3);
-        } catch (err: any) {
-            setError(err.message || "Invalid verification code");
-        } finally {
-            setLoading(false);
-        }
+        // In our current API, verification happens when resetting
+        setStep(3);
     };
 
     // Handle Resend (Mock for now, re-calls forgotPassword)
@@ -123,7 +116,8 @@ const ForgotPassword = () => {
 
         setLoading(true);
         try {
-            await resetPassword(email, newPassword);
+            const code = otp.join("");
+            await resetPassword(email, code, newPassword);
             setStep(4);
         } catch (err: any) {
             setError(err.message || "Failed to reset password");

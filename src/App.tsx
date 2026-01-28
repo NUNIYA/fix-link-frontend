@@ -9,12 +9,13 @@ import CustomerHome from "./pages/auth/customer/CustomerHome";
 import SearchResults from "./pages/auth/customer/SearchResults";
 import ProfessionalProfile from "./pages/auth/customer/ProfessionalProfile";
 import CustomerMessages from "./pages/auth/customer/CustomerMessages";
-import ProfessionalHome from "./pages/auth/professional/ProfessionalHome"
+import ProfessionalHome from "./pages/auth/professional/ProfessionalHome";
 import ProfessionalMessages from "./pages/auth/professional/ProfessionalMessages";
 import LoginPage from "./pages/auth/login";
 import ForgotPassword from "./pages/auth/login/ForgotPassword";
 import PendingApproval from "./pages/signup/PendingApproval";
 import AccountSettings from "./pages/auth/customer/AccountSettings";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -38,50 +39,62 @@ function App() {
         <Route
           path="/customer/home"
           element={
-
-            <CustomerHome />
-
+            <ProtectedRoute role="customer">
+              <CustomerHome />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/customer/search"
           element={
-
-            <SearchResults />
-
+            <ProtectedRoute role="customer">
+              <SearchResults />
+            </ProtectedRoute>
           }
         />
         <Route path="/customer/profile/:id" element={
-          <ProfessionalProfile />
+          <ProtectedRoute role="customer">
+            <ProfessionalProfile />
+          </ProtectedRoute>
         } />
 
         <Route path="/customer/messages/:id" element={
-          <CustomerMessages />
+          <ProtectedRoute role="customer">
+            <CustomerMessages />
+          </ProtectedRoute>
         } />
 
         <Route
           path="/professional/home"
           element={
-
-            <ProfessionalHome />
-
+            <ProtectedRoute role="professional">
+              <ProfessionalHome />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/professional/messages"
           element={
-            <ProfessionalMessages />
+            <ProtectedRoute role="professional">
+              <ProfessionalMessages />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/professional/profile"
           element={
-            <ProfessionalProfile />
+            <ProtectedRoute role="professional">
+              <ProfessionalProfile />
+            </ProtectedRoute>
           }
         />
 
         <Route path="/signup/pending-approval" element={<PendingApproval />} />
-        <Route path="/account-settings" element={<AccountSettings />} />
+        <Route path="/account-settings" element={
+          <ProtectedRoute>
+            <AccountSettings />
+          </ProtectedRoute>
+        } />
 
       </Routes>
     </BrowserRouter>

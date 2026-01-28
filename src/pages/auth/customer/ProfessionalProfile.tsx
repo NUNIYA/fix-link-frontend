@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import CustomerNavbar from './components/CustomerNavbar';
 import CustomerFooter from './components/CustomerFooter';
@@ -30,7 +30,7 @@ const ProfessionalProfile = () => {
 
 
     const handleDeletePortfolio = (idx: number) => {
-        setProfilePortfolio(profilePortfolio.filter((_, i) => i !== idx));
+        setProfilePortfolio(profilePortfolio.filter((_: any, i: number) => i !== idx));
     };
 
     const handleAddPortfolio = () => {
@@ -49,39 +49,69 @@ const ProfessionalProfile = () => {
             setAvailableDays([...availableDays, day]);
         }
     };
-    const [profileName, setProfileName] = useState(user?.name || "Jane Doe");
-    const [profileRole, setProfileRole] = useState(user?.serviceCategory || "Certified Master Electrician");
-    const [profileAbout, setProfileAbout] = useState(user?.shortBio || "With over 12 years of experience serving the Addis Ababa metropolitan area, I specialize in high-end residential wiring, commercial energy systems, and modern smart home integrations. My work is defined by precision, safety adherence, and a commitment to providing the most efficient electrical solutions for my clients. Whether it's a small repair or a large-scale industrial installation, I bring the same level of professionalism and care to every project.");
-    const [profileSkills, setProfileSkills] = useState(user?.skills || "Residential Wiring, Commercial Systems, Smart Home Setup");
-    const [profileExperience, setProfileExperience] = useState(user?.yearsOfExperience || "12");
-    const [profileRate, setProfileRate] = useState(user?.hourlyRate || "450");
-    const [profileLocation, setProfileLocation] = useState(user?.city && user?.subcity ? `${user.city}, ${user.subcity}` : "Addis Ababa, Bole");
-    const [profileLanguages, setProfileLanguages] = useState(user?.languages || ["Amharic (Native)", "English (Fluent)"]);
-    const [profilePortfolio, setProfilePortfolio] = useState(user?.portfolio || [
-        { img: "https://lh3.googleusercontent.com/aida-public/AB6AXuD-ICmJzEkJysixT_89xmNvQKp9HwpNkhXJ0VPDeTC2X6qXmxt1ILxzhCareoCQDyQZ1yso7CjO3nhqVq4NY0W-1-qdUYIirqB0KF3SDklgYOopHg9Jh8ZVAZH6BZjwtPI0LFtvULHBMA59WpybL4yUkQqDFYmP20doqEPupcEJ_scNN8ouPLC-QjBfB0qjEc7EsQOVJiqFJiip8rYjfQjFPjKZ6-CxV0RkUoaS4LdbOLP_GMtY04XXJK33P7rGrKAI_oNzEPv9oQ", title: "Kitchen Illumination" },
-        { img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDTa7vavLGz3JU_q8MPADOVQpf2Ho4y_j7y09JmxJKAAIwS9oaEnIXrhKpi6G4QjCrprcNZnJnDDzqnwXm7zboSz3hehqq7l1ra56_OR4jF8NkJiMLtFryRZYaf_nSMLK-4lNrA5Ssj6nu0gzsGBaxnrRi7wXcwlM5hUugpBPvlZiKvinrQzebM7B4i1tM8-BfntU35YpSWtQ-Wt_qrU6vucVr0Gr-DQYBSy0uxl8lWqKK7IsSpzEqFMuoMHFZAqruyt3LahAckGA", title: "Main Panel Upgrade" },
-        { img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAN6DR-9il7FzYttFR3QwEwoTGXJE_-7taTA5yqw6XveIzHw_9f02wrZQWTFKwucTWFF4fRS0ulepPuFXkxz3gJkefjR3qiqqlbvtwhqGnCgJohi89EHrdzRDSoxqz87vBr5ipw44raEh9PrtJrzWpsFR4n_kHjz5IXnnrd9VrWpj7GYfLTPZJ_xuvqfFbRU9RDpBwE5MEUuogd9fDTVUjbsWF_bM2ZWXMrEyrXMossjD99g0ojpeQovc8GV4icOv90yIsar8go6A", title: "Landscape Lighting" },
-        { img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBHZA8vwQ8l5_wzdMVs0Yx_UZG4YsTPr9eEXmpI-Dz1lVEoPHLHw3f9ogp7qJxVU1F6GSkB91iYyjppHvBJkmEmVV7wOleXI8EAkIzZs1NFAHak-ZagbyQVhvNpYufwPbq7Oa6OfrqEPBtiqZSkG0fxEWIzTSWXf7LxELodeqRaRzXzUo6MPaXyyNSr57AC6Xa0OzopGjAHXE6Cj1HDc3qGn2yCCUNWaIGhZ7utof2fz2l1mBs1wHgcbcNMfODPBpv_AJbFqk9--A", title: "Corporate Office Suite" },
-        { img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCT6fSz8iR-SotIV_oeMmcaT15hRm7wuQ--3E2Bf2lkLw0cDqqahugmcXBI-euZuDINvNloDC7xbSpEKC6x4NfvJ9vcqXBaRx20gyJ9EVMP6-vq-5aEW5E8JN9aLozwiy5OSZuQOwMr_VpbCT2pQEJOKKH7uwEnqA194upXYjMtANgBqkNEeWROacHtZhztsBZLkY8oaT2RWfwsA71FHh9nqQrUvLTLLyxM7fUawIAjd0kjWpC6qqp52AiKhUSTbsd2gk3ZwRz6tA", title: "Smart EV Charging" },
-        { img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCUE8R2bh2fB9iX9uV0dlG7_GirouqztSeEHZkQTpWHp7rWGz7E7SlTie-W8oOtjrzNJwsVhcF9Hzu3-fDvNaK8Xcobf1t4Lv_vzXw5sZc7aLXKMGDgN647Lo55MjJkehc9xLnngcyzE_3kPYBcJfgYWUl08PaOgr-u86Dxp8aqAsV-PfoM9beVAAkNHOE25bpMhBpupu9Lz4VWVJYumiQs7cIyRqHsw8-E9wZ5DowDWZYSMQQs4OQP3XGMqWDoPswTejxTmqtJ-g", title: "Retail Lighting Design" }
-    ]);
+    const [profileName, setProfileName] = useState("");
+    const [profileRole, setProfileRole] = useState("");
+    const [profileAbout, setProfileAbout] = useState("");
+    const [profileSkills, setProfileSkills] = useState("");
+    const [profileExperience, setProfileExperience] = useState("");
+    const [profileRate, setProfileRate] = useState("");
+    const [profileLocation, setProfileLocation] = useState("");
+    const [profileLanguages, setProfileLanguages] = useState<string[]>([]);
+    const [profilePortfolio, setProfilePortfolio] = useState<{ img: string; title: string }[]>([]);
     const [availableDays, setAvailableDays] = useState<number[]>([1, 6]);
 
-    const handleSave = () => {
+    // Use effect to initialize or update data
+    useEffect(() => {
+        if (isProView && user) {
+            setProfileName(user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.name || "Jane Doe");
+            setProfileRole(user.profession || "Certified Master Electrician");
+            setProfileAbout(user.bio || "With over 12 years of experience...");
+            setProfileSkills(user.skills || "Residential Wiring, Commercial Systems, Smart Home Setup");
+            setProfileExperience(user.years_of_experience?.toString() || "12");
+            setProfileRate(user.hourlyRate || "450");
+            setProfileLocation(user.city && user.subcity ? `${user.city}, ${user.subcity}` : "Addis Ababa, Bole");
+            setProfileLanguages(user.languages || ["Amharic (Native)", "English (Fluent)"]);
+            setProfilePortfolio(user.portfolio || [
+                { img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400", title: "Kitchen Illumination" },
+                { img: "https://images.unsplash.com/photo-1558403194-611308249627?auto=format&fit=crop&q=80&w=400", title: "Main Panel Upgrade" }
+            ]);
+        } else if (!isProView) {
+            // Customer view: use mock professional data
+            setProfileName("Jane Doe");
+            setProfileRole("Certified Master Electrician");
+            setProfileAbout("With over 12 years of experience serving the Addis Ababa metropolitan area, I specialize in high-end residential wiring, commercial energy systems, and modern smart home integrations.");
+            setProfileSkills("Residential Wiring, Commercial Systems, Smart Home Setup");
+            setProfileExperience("12");
+            setProfileRate("450");
+            setProfileLocation("Addis Ababa, Bole");
+            setProfileLanguages(["Amharic (Native)", "English (Fluent)"]);
+            setProfilePortfolio([
+                { img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400", title: "Kitchen Illumination" },
+                { img: "https://images.unsplash.com/photo-1558403194-611308249627?auto=format&fit=crop&q=80&w=400", title: "Main Panel Upgrade" }
+            ]);
+        }
+    }, [isProView, user]);
+
+    const handleSave = async () => {
         if (isProView) {
             const [city, subcity] = profileLocation.split(',').map(s => s.trim());
-            updateUser({
-                name: profileName,
-                serviceCategory: profileRole,
-                shortBio: profileAbout,
-                skills: profileSkills,
-                yearsOfExperience: profileExperience,
-                hourlyRate: profileRate,
-                city: city || profileLocation,
-                subcity: subcity || "",
-                languages: profileLanguages,
-                portfolio: profilePortfolio
-            });
+            try {
+                await updateUser({
+                    first_name: profileName.split(' ')[0],
+                    last_name: profileName.split(' ').slice(1).join(' '),
+                    profession: profileRole,
+                    bio: profileAbout,
+                    skills: profileSkills,
+                    years_of_experience: parseInt(profileExperience),
+                    hourlyRate: profileRate,
+                    city: city || profileLocation,
+                    subcity: subcity || "",
+                    languages: profileLanguages,
+                    portfolio: profilePortfolio
+                } as any);
+            } catch (error) {
+                console.error("Failed to save profile:", error);
+            }
         }
         setIsEditing(false);
     };
@@ -103,7 +133,7 @@ const ProfessionalProfile = () => {
         coverImage: "https://lh3.googleusercontent.com/aida-public/AB6AXuCVqLxahM8mBBENqzv_93ZaZeNL1f0E4OzaxyeOFzKw3OmNbp_zAyVx3JtjzUkCcPITJYiDapRmZtn_EutJF9SyzhnQ47oEkrtpf_jkjYABsBbV2tyj8e9WaqpeNQBOKuU9gk8fPtFDxKzEmVI1H1HYd1VtpX_XZnxZV8jzd8tGafsAt9maXvNzTDR8sbsW1KfEJQ-3aQeOKZar1jTjMwaVQsT8m4MKp1md-ihGBr36VqI7SnxPjsrNrGTqY0ua9N7_QRGDkEMx3Q",
         profileImage: user?.profilePhoto || "https://lh3.googleusercontent.com/aida-public/AB6AXuAYwFXuI6lt-gjBHoaWhwxkjUA_xtTpRKyIdtnF8EzLIQGK6h5K52FCM_vPalI6IAEHd1eqig6reNGAWT7SZss4x0CKmvpcWzX0zP4y5bpeFKkWnhmD5pOCZLfomXowBI6P9owqtHpG9RY0IRNMi6DHLlwrNE_gxiXizxm24o0xBuAxHw6OgZQJqgXyiFVFXBxEgWMpijasK8ZYkW1g_Zej3BW5jkaQ6aH4rWfd1GRDC3gD25cYAqC6wwpTQuVyDDAd-LsNhyY9TQ",
         about: profileAbout,
-        skills: profileSkills.split(',').map(s => s.trim()),
+        skills: profileSkills.split(',').map((s: string) => s.trim()),
         languages: ["Amharic (Native)", "English (Fluent)"],
         portfolio: [
             { img: "https://lh3.googleusercontent.com/aida-public/AB6AXuD-ICmJzEkJysixT_89xmNvQKp9HwpNkhXJ0VPDeTC2X6qXmxt1ILxzhCareoCQDyQZ1yso7CjO3nhqVq4NY0W-1-qdUYIirqB0KF3SDklgYOopHg9Jh8ZVAZH6BZjwtPI0LFtvULHBMA59WpybL4yUkQqDFYmP20doqEPupcEJ_scNN8ouPLC-QjBfB0qjEc7EsQOVJiqFJiip8rYjfQjFPjKZ6-CxV0RkUoaS4LdbOLP_GMtY04XXJK33P7rGrKAI_oNzEPv9oQ", title: "Kitchen Illumination" },
@@ -333,7 +363,7 @@ const ProfessionalProfile = () => {
                                                         className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-primary rounded-xl p-3 outline-none text-sm text-text-secondary"
                                                     />
                                                 ) : (
-                                                    professional.skills.map(skill => (
+                                                    professional.skills.map((skill: string) => (
                                                         <span key={skill} className="px-4 py-1.5 text-sm rounded-full bg-primary/5 text-primary font-semibold border border-primary/10">{skill}</span>
                                                     ))
                                                 )}
@@ -352,7 +382,7 @@ const ProfessionalProfile = () => {
                                                         className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-primary rounded-xl p-3 outline-none text-sm text-text-secondary"
                                                     />
                                                 ) : (
-                                                    profileLanguages.map(lang => (
+                                                    profileLanguages.map((lang: string) => (
                                                         <span key={lang} className="px-4 py-1.5 text-sm rounded-full bg-slate-100 dark:bg-slate-800 text-text-primary dark:text-white font-semibold border border-slate-200 dark:border-slate-700">{lang}</span>
                                                     ))
                                                 )}
@@ -367,7 +397,7 @@ const ProfessionalProfile = () => {
                                         <button className="text-primary font-bold text-sm hover:underline">View All Projects</button>
                                     </div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                                        {profilePortfolio.map((item, index) => (
+                                        {profilePortfolio.map((item: any, index: number) => (
                                             <div key={index} className="aspect-square rounded-xl overflow-hidden cursor-pointer group relative border border-slate-200 dark:border-slate-700 shadow-sm">
                                                 <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src={item.img} alt={item.title} />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
@@ -429,7 +459,7 @@ const ProfessionalProfile = () => {
                                             ))}
 
                                             {/* Month Days */}
-                                            {[...Array(30)].map((_, i) => {
+                                            {[...Array(30)].map((_, i: number) => {
                                                 const day = i + 1;
                                                 const isBooked = day === 4;
                                                 const isToday = day === 6;
@@ -487,7 +517,7 @@ const ProfessionalProfile = () => {
                                                                     <h4 className="font-bold text-text-primary dark:text-white">{review.name}</h4>
                                                                     <div className="flex items-center gap-2 mt-0.5">
                                                                         <div className="flex text-yellow-400 text-xs">
-                                                                            {[...Array(5)].map((_, i) => (
+                                                                            {[...Array(5)].map((_, i: number) => (
                                                                                 <span key={i} className="material-symbols-outlined text-xs" style={{ fontVariationSettings: i < review.rating ? "'FILL' 1" : "" }}>star</span>
                                                                             ))}
                                                                         </div>

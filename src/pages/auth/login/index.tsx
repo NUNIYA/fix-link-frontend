@@ -24,7 +24,7 @@ const LoginPage: React.FC = () => {
 
     try {
       const response = await loginUser(email, password);
-      login(response.token, response.user);
+      login(response.access, response.refresh, response.user);
 
       // Redirect based on role
       if (response.user.role === "professional") {

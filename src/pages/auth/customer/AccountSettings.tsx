@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import CustomerNavbar from "./components/CustomerNavbar";
 import CustomerFooter from "./components/CustomerFooter";
@@ -8,8 +8,8 @@ const AccountSettings = () => {
     const [activeTab, setActiveTab] = useState<"personal" | "security">("personal");
 
     // Personal Info State
-    const [firstName, setFirstName] = useState(user?.firstName || user?.name?.split(' ')[0] || "");
-    const [lastName, setLastName] = useState(user?.lastName || user?.name?.split(' ')[1] || "");
+    const [firstName, setFirstName] = useState(user?.first_name || user?.name?.split(' ')[0] || "");
+    const [lastName, setLastName] = useState(user?.last_name || user?.name?.split(' ')[1] || "");
     const [email, setEmail] = useState(user?.email || "");
     const [phone, setPhone] = useState(user?.phone || "");
     const [location, setLocation] = useState(user?.city ? `${user.city}${user.subcity ? ', ' + user.subcity : ''}` : "");
@@ -21,19 +21,22 @@ const AccountSettings = () => {
     const [passwordError, setPasswordError] = useState("");
     const [updateSuccess, setUpdateSuccess] = useState(false);
 
-    const handleUpdatePersonal = (e: React.FormEvent) => {
+    const handleUpdatePersonal = async (e: React.FormEvent) => {
         e.preventDefault();
-        updateUser({
-            firstName,
-            lastName,
-            name: `${firstName} ${lastName}`.trim(),
-            email,
-            phone,
-            city: location.split(',')[0]?.trim(),
-            subcity: location.split(',')[1]?.trim() || ""
-        });
-        setUpdateSuccess(true);
-        setTimeout(() => setUpdateSuccess(false), 3000);
+        try {
+            await updateUser({
+                first_name: firstName,
+                last_name: lastName,
+                email,
+                phone,
+                city: location.split(',')[0]?.trim(),
+                subcity: location.split(',')[1]?.trim() || ""
+            });
+            setUpdateSuccess(true);
+            setTimeout(() => setUpdateSuccess(false), 3000);
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     const handleUpdatePassword = (e: React.FormEvent) => {

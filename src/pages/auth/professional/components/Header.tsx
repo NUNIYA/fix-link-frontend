@@ -1,7 +1,7 @@
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../context/AuthContext";
 import { useMockService } from "../../../../context/MockServiceContext";
-import { useState } from "react";
 
 const Header: React.FC = () => {
     const { user, logout } = useAuth();
@@ -10,7 +10,7 @@ const Header: React.FC = () => {
     const [showNotifications, setShowNotifications] = useState(false);
 
     const isProView = window.location.pathname.includes('/professional');
-    const unreadNotifications = notifications.filter(n => {
+    const unreadNotifications = notifications.filter((n: any) => {
         const isMatch = (n.userId === user?.id || n.userId === user?.name || isProView);
         // Pros should see "new_request" and "new_message", but not "request_accepted"
         const isProcessable = isProView ? (n.type === 'new_request' || n.type === 'new_message') : true;
@@ -64,18 +64,18 @@ const Header: React.FC = () => {
                                 <span className="text-xs text-primary font-medium">{unreadNotifications.length} New</span>
                             </div>
                             <div className="max-h-80 overflow-y-auto">
-                                {notifications.filter(n => {
+                                {notifications.filter((n: any) => {
                                     const isMatch = (n.userId === user?.id || n.userId === user?.name || isProView);
                                     const isProcessable = isProView ? n.type === 'new_request' : true;
                                     return isMatch && isProcessable;
                                 }).length === 0 ? (
                                     <div className="px-4 py-8 text-center text-gray-500 text-sm">No notifications yet</div>
                                 ) : (
-                                    notifications.filter(n => {
+                                    notifications.filter((n: any) => {
                                         const isMatch = (n.userId === user?.id || n.userId === user?.name || isProView);
                                         const isProcessable = isProView ? n.type === 'new_request' : true;
                                         return isMatch && isProcessable;
-                                    }).map(n => (
+                                    }).map((n: any) => (
                                         <div
                                             key={n.id}
                                             className={`px-4 py-3 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5' : ''}`}

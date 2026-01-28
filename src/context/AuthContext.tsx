@@ -5,9 +5,9 @@ interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (token: string, user: User) => void;
+    login: (access: string, refresh: string, user: User) => void;
     logout: () => void;
-    updateUser: (userData: Partial<User>) => void;
+    updateUser: (userData: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,27 +19,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         // Check for saved session
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("access_token");
         const savedUser = localStorage.getItem("user");
 
         if (token && savedUser) {
-            setUser(JSON.parse(savedUser));
-            setIsAuthenticated(true);
+            try {
+                setUser(JSON.parse(savedUser));
+                setIsAuthenticated(true);
+            } catch (e) {
+                console.error("Failed to parse saved user", e);
+                logout();
+            }
         }
         setIsLoading(false);
     }, []);
 
-    const login = (token: string, userData: User) => {
-        localStorage.setItem("token", token);
+    const login = (access: string, refresh: string, userData: User) => {
+        localStorage.setItem("access_token", access);
+        localStorage.setItem("refresh_token", refresh);
         localStorage.setItem("user", JSON.stringify(userData));
-        localStorage.setItem("role", userData.role); // For ProtectedRoute legacy check
+        localStorage.setItem("role", userData.role);
 
         setUser(userData);
         setIsAuthenticated(true);
     };
 
     const logout = () => {
-        localStorage.removeItem("token");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
         localStorage.removeItem("user");
         localStorage.removeItem("role");
 
@@ -47,11 +54,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsAuthenticated(false);
     };
 
-    const updateUser = (userData: Partial<User>) => {
+    const updateUserData = async (userData: Partial<User>) => {
         if (!user) return;
-        const updatedUser = { ...user, ...userData };
-        setUser(updatedUser);
-        localStorage.setItem("user", JSON.stringify(updatedUser));
+
+        try {
+            const { updateUserProfile } = await import("../api/auth.api");
+            const updatedUser = await updateUserProfile(user.id, userData);
+
+            // Backend returns full user, so we merge it
+            const newUserData = { ...user, ...updatedUser };
+            setUser(newUserData);
+            localStorage.setItem("user", JSON.stringify(newUserData));
+        } catch (error) {
+            console.error("Failed to update user profile on server:", error);
+            // Fallback: update locally anyway if you want optimistic UI, 
+            // but for settings, it's better to show error.
+            throw error;
+        }
     };
 
     return (
@@ -62,7 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 isLoading,
                 login,
                 logout,
-                updateUser,
+                updateUser: updateUserData,
             }}
         >
             {children}
