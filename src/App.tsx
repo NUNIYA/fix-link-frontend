@@ -72,6 +72,12 @@ function App() {
             <ProfessionalMessages />
           }
         />
+        <Route
+          path="/professional/profile"
+          element={
+            <ProfessionalProfile />
+          }
+        />
 
         <Route path="/signup/pending-approval" element={<PendingApproval />} />
 

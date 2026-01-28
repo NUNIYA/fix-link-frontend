@@ -1,10 +1,11 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useMockService } from "../../../../context/MockServiceContext";
 import { useAuth } from "../../../../context/AuthContext";
 
 const Sidebar: React.FC = () => {
     const { notifications } = useMockService();
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
     const isProView = window.location.pathname.includes('/professional');
     const unreadMessagesCount = notifications.filter(n =>
         (n.userId === user?.id || n.userId === user?.name || isProView) && !n.isRead
@@ -65,7 +66,13 @@ const Sidebar: React.FC = () => {
                     <p className="text-sm font-medium">Settings</p>
                 </NavLink>
 
-                <button className="flex items-center gap-4 p-3 rounded-lg hover:bg-white/10 hover:text-white">
+                <button
+                    onClick={() => {
+                        logout();
+                        navigate('/');
+                    }}
+                    className="flex items-center gap-4 p-3 rounded-lg hover:bg-white/10 hover:text-white"
+                >
                     <span className="material-symbols-outlined text-2xl">logout</span>
                     <p className="text-sm font-medium">Logout</p>
                 </button>
