@@ -8,10 +8,28 @@ import LocationInput from "../../../components/LocationInput";
 import PasswordStrength from "../../../components/PasswordStrength";
 import { validatePassword } from "../../../utils/validation";
 import PhoneInput from "../../../components/PhoneInput";
+import { getServiceCategories } from "../../../api/jobs.api";
 
 const ProfessionalRegister = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [categories, setCategories] = React.useState<{ id: string, name: string }[]>([]);
+
+  React.useEffect(() => {
+    getServiceCategories().then(data => {
+      let fetched = [];
+      if (Array.isArray(data)) fetched = data;
+      else if (data && Array.isArray(data.results)) fetched = data.results;
+
+      if (fetched.length > 0) {
+        setCategories(fetched);
+      }
+    }).catch(err => {
+      console.error("Failed to fetch categories", err);
+    });
+  }, []);
+
 
   // Get email from router state
   const email = (location.state as { email?: string })?.email;
@@ -40,6 +58,7 @@ const ProfessionalRegister = () => {
     password: "",
     confirmPassword: "",
     location: "",
+    licenseNumber: "",
   });
 
   // File states
@@ -132,6 +151,7 @@ const ProfessionalRegister = () => {
       "location",
       "payoutMethod",
       "accountNumber",
+      "licenseNumber",
     ];
 
     for (const field of requiredFields) {
@@ -390,11 +410,9 @@ const ProfessionalRegister = () => {
                   required
                 >
                   <option value="">Select a category</option>
-                  <option>Plumbing</option>
-                  <option>Electrical</option>
-                  <option>Carpentry</option>
-                  <option>Painting</option>
-                  <option>Cleaning</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
                 </select>
               </label>
               <label className="flex flex-col">
@@ -429,10 +447,22 @@ const ProfessionalRegister = () => {
           {/* Verification */}
           <section className="space-y-6">
             <h2 className="text-xl font-bold border-b pb-3">C. Verification Documents *</h2>
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="flex flex-col">
                 <span className="font-medium pb-1">CV / Resume *</span>
                 <input type="file" name="cvFile" onChange={handleChange} className="form-input" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
+              </label>
+              <label className="flex flex-col">
+                <span className="font-medium pb-1">Professional License Number *</span>
+                <input
+                  type="text"
+                  name="licenseNumber"
+                  value={form.licenseNumber}
+                  onChange={handleChange}
+                  className="form-input h-12"
+                  placeholder="Enter your license number"
+                  required
+                />
               </label>
             </div>
           </section>

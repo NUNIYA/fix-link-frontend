@@ -28,3 +28,11 @@ export const listJobs = async () => {
     const response = await api.get("/jobs/jobs/");
     return response.data;
 };
+
+/**
+ * Get service categories
+ */
+export const getServiceCategories = async () => {
+    const response = await api.get("/services/categories/");
+    return response.data;
+};

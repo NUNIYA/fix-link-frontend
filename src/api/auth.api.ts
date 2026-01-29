@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { Role, User } from "../types/auth.types";
 
-const API_URL = "https://auction-sao-talks-recreation.trycloudflare.com";
+const API_URL = (import.meta.env.VITE_API_URL || "https://auction-sao-talks-recreation.trycloudflare.com").replace(/\/$/, "");
 
 // Create axios instance
 export const api = axios.create({
@@ -85,13 +85,23 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
       last_name: formData.lastName,
       phonenumber: formData.phone,
       role: role,
-      // Pass other fields only if they exist (simplification for professional)
-      ...(formData.serviceCategory && { profession: formData.serviceCategory }),
+      // Pass other fields only if they exist
+      ...(formData.serviceCategory && {
+        profession: formData.serviceCategory // Send the selected category name as profession
+      }),
+      ...(formData.gender && { gender: formData.gender }),
+      ...(formData.dateOfBirth && { date_of_birth: formData.dateOfBirth }),
       ...(formData.yearsOfExperience && { years_of_experience: Number(formData.yearsOfExperience) }),
       ...(formData.shortBio && { bio: formData.shortBio }),
       ...(formData.location && { location: formData.location }),
-      ...(formData.payoutMethod && { payout_method: formData.payoutMethod }),
-      ...(formData.accountNumber && { account_number: formData.accountNumber }),
+      ...(formData.city && { city: formData.city }),
+      ...(formData.subcity && { subcity: formData.subcity }),
+      ...(formData.houseNumber && { house_number: formData.houseNumber }),
+      ...(formData.payoutMethod && { preferred_payout_method: formData.payoutMethod }),
+      ...(formData.accountNumber && { payout_account_number: formData.accountNumber }),
+      ...(formData.licenseNumber && { license_number: formData.licenseNumber }),
+      // Service categories as array of UUIDs
+      ...(formData.serviceCategory && { service_categories: [formData.serviceCategory] }),
     };
 
     const endpoint = role === "professional"
