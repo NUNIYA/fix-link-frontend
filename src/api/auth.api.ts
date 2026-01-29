@@ -14,11 +14,32 @@ export const api = axios.create({
 // Add interceptor to include token if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
-  if (token) {
+  // Guard against invalid/expired/undefined token strings
+  if (token && token !== "undefined" && token !== "null") {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
+
+// Add interceptor to handle 401 Unauthorized errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear token and redirect if unauthorized
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user");
+
+      // Force reload to clear state and redirect via App routes if they guard
+      // Only do this if we're not already on the login page to avoid loops
+      if (!window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 /**
  * Helper to parse backend errors
@@ -73,7 +94,11 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
       ...(formData.accountNumber && { account_number: formData.accountNumber }),
     };
 
-    const response = await api.post("/accounts/users/register/", payload);
+    const endpoint = role === "professional"
+      ? "/accounts/users/register-professional/"
+      : "/accounts/users/register/";
+
+    const response = await api.post(endpoint, payload);
     return {
       success: true,
       user: response.data.user,
