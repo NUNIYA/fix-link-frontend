@@ -17,10 +17,6 @@ const Sidebar: React.FC = () => {
 
             {/* LOGO */}
             <div className="flex items-center gap-3 p-2 mb-6 text-white">
-                <div className="size-8">
-                    {/* you can replace this svg later */}
-                    <span className="material-symbols-outlined text-3xl">handyman</span>
-                </div>
                 <h1 className="text-lg font-bold tracking-tight">Fix-Link</h1>
             </div>
 

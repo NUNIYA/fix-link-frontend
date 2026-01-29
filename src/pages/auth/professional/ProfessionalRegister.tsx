@@ -199,12 +199,6 @@ const ProfessionalRegister = () => {
           href="#"
           className="flex items-center gap-2.5 text-2xl font-black text-[#111518] dark:text-white"
         >
-          <span
-            className="material-symbols-outlined text-primary text-4xl"
-            style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}
-          >
-            link
-          </span>
           Fix-Link
         </a>
       </header>
@@ -458,17 +452,19 @@ const ProfessionalRegister = () => {
                 >
                   <option value="">Select a method</option>
                   <option>Telebirr</option>
-                  <option>CBE Birr</option>
-                  <option>Bank Account</option>
                 </select>
               </label>
               <label className="flex flex-col">
-                <span className="font-medium pb-1">Account / Phone Number *</span>
+                <span className="font-medium pb-1">Telebirr Number *</span>
                 <input
                   type="text"
                   name="accountNumber"
                   value={form.accountNumber}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setForm({ ...form, accountNumber: val });
+                  }}
+                  placeholder="0911223344"
                   className="form-input h-12"
                   required
                 />

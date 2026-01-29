@@ -49,6 +49,13 @@ const VerifyEmail = () => {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      const prev = document.getElementById(`otp-${index - 1}`);
+      prev?.focus();
+    }
+  };
+
   const handleVerify = async () => {
     const code = otp.join("");
     if (code.length !== 6) {
@@ -97,6 +104,7 @@ const VerifyEmail = () => {
               id={`otp-${index}`}
               value={digit}
               onChange={(e) => handleChange(e.target.value, index)}
+              onKeyDown={(e) => handleKeyDown(e, index)}
               maxLength={1}
               className="w-12 h-14 text-center text-xl font-bold border rounded-lg"
             />

@@ -134,9 +134,6 @@ const CustomerRegister = () => {
         {/* Logo */}
         <div className="flex flex-col items-center gap-2 mb-6 text-center">
           <div className="flex items-center gap-2 text-2xl font-black">
-            <span className="material-symbols-outlined text-primary text-4xl">
-              link
-            </span>
             <span>Fix-Link</span>
           </div>
           <h1 className="text-3xl font-bold">

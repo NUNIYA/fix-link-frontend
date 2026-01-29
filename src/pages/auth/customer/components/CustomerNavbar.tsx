@@ -63,7 +63,6 @@ const CustomerNavbar = () => {
       <div className="flex items-center gap-4 text-text-primary dark:text-white">
         {/* Logo */}
         <div className="flex items-center gap-2 shrink-0 cursor-pointer" onClick={() => navigate('/')}>
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-bold text-white shadow-sm">F</div>
           <span className="text-lg font-bold tracking-tight hidden xl:block text-text-primary dark:text-white">Fix-Link</span>
         </div>
 
