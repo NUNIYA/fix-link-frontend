@@ -36,3 +36,11 @@ export const getServiceCategories = async () => {
     const response = await api.get("/services/categories/");
     return response.data;
 };
+
+/**
+ * Get list of verified professionals
+ */
+export const getProfessionals = async () => {
+    const response = await api.get("/accounts/users/professional-detail/");
+    return response.data;
+};

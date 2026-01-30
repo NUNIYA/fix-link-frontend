@@ -27,6 +27,11 @@ const ProtectedRoute = ({ children, role }: Props) => {
     return <Navigate to="/" replace />;
   }
 
+  // Check if professional is verified
+  if (role === "professional" && user?.is_verified_professional === false) {
+    return <Navigate to="/signup/pending-approval" replace />;
+  }
+
   return children;
 };
 

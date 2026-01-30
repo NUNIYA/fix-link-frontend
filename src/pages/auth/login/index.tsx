@@ -27,11 +27,23 @@ const LoginPage: React.FC = () => {
       login(response.access, response.refresh, response.user);
 
       // Redirect based on role
+      // Redirect based on role
       if (response.user.role === "professional") {
-        if (response.user.status === "PENDING_APPROVAL") {
+        try {
+          // Fetch verification status directly from backend
+          const { getProfessionalDetails } = await import("../../../api/professional.api");
+          const details = await getProfessionalDetails();
+
+          // Check if professional is verified (explicit check)
+          if (details.is_verified_professional === true) {
+            navigate("/professional/home");
+          } else {
+            navigate("/signup/pending-approval");
+          }
+        } catch (err) {
+          console.error("Failed to fetch professional details", err);
+          // Fallback safely to pending if we can't verify status
           navigate("/signup/pending-approval");
-        } else {
-          navigate("/professional/home");
         }
       } else {
         // For customers, check if there is a return query param
