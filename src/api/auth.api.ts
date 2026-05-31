@@ -579,9 +579,28 @@ export const createReview = async (_professionalId: string, rating: number, comm
 /**
  * Professional Specific
  */
-export const updateProfessionalDetails = async (data: Record<string, any>) => {
+export const updateProfessionalDetails = async (data: Record<string, any> | FormData) => {
   try {
-    const response = await api.patch('/users/professional-detail/', data);
+    let payload: Record<string, any> | FormData = data;
+
+    if (!(data instanceof FormData)) {
+      const formData = new FormData();
+      Object.keys(data).forEach((key) => {
+        const val = data[key];
+        if (val !== undefined && val !== null) {
+          if (Array.isArray(val)) {
+            val.forEach((item) => formData.append(key, String(item)));
+          } else {
+            formData.append(key, String(val));
+          }
+        }
+      });
+      payload = formData;
+    }
+
+    const response = await api.patch('/users/professional-detail/', payload, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
     clearUserDetailsCache();
     return response.data;
   } catch (error: any) {

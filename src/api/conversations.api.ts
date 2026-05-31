@@ -84,7 +84,10 @@ export const sendMessage = async (conversationId: string, text: string): Promise
     return response.data;
   } catch (error: any) {
     console.error(`sendMessage: failed for ${conversationId}`, error?.response?.data || error?.message || error);
-    throw new Error(parseError(error));
+    const err = new Error(parseError(error)) as any;
+    err.status = error?.response?.status;
+    err.response = error?.response;
+    throw err;
   }
 };
 
@@ -107,7 +110,7 @@ export const markAsRead = async (conversationId: string): Promise<void> => {
 export const getUnreadCount = async (): Promise<number> => {
   try {
     const response = await api.get("/conversations/unread-count/");
-    return response.data.count || 0;
+    return response.data.unread_messages || response.data.count || 0;
   } catch (error: any) {
     console.error("getUnreadCount: failed", error?.response?.data || error?.message || error);
     return 0;

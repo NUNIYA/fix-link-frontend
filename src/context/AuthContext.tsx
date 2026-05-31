@@ -150,7 +150,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 
                 Object.keys(userData).forEach((key) => {
                     if (proFields.includes(key)) {
-                        proData[key] = (userData as any)[key];
+                        let targetKey = key;
+                        if (key === 'lat') targetKey = 'latitude';
+                        if (key === 'lng') targetKey = 'longitude';
+                        proData[targetKey] = (userData as any)[key];
                     } else if (key !== "blocked_dates" && key !== "available_days" && key !== "portfolio") {
                         (userDataToUpdate as any)[key] = (userData as any)[key];
                     }

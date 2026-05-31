@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { updateUserProfile } from "../../api/auth.api";
 import { Phone, Calendar, MapPin, ArrowRight, CheckCircle2 } from "lucide-react";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import ErrorMessage from "../../components/ErrorMessage";
@@ -12,7 +11,7 @@ import { formatLocationDisplay } from "../../utils/location";
 
 const Onboarding: React.FC = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const navigate = useNavigate();
 
   const [phone, setPhone] = useState("");
@@ -39,12 +38,13 @@ const Onboarding: React.FC = () => {
     setLoading(true);
 
     try {
-      await updateUserProfile(user.id, {
+      await updateUser({
         phonenumber: phone,
         date_of_birth: dob,
         country: locationData?.country || "Ethiopia",
         city: locationData?.city || "Addis Ababa",
         subcity: locationData?.subcity || location.split(',')[0]?.trim() || "",
+        location: locationData?.displayName || location,
         ...(locationData?.lat != null && { lat: locationData.lat }),
         ...(locationData?.lng != null && { lng: locationData.lng }),
       } as any);

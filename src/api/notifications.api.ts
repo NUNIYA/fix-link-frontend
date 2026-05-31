@@ -90,7 +90,7 @@ export const getNotifications = async (): Promise<Notification[]> => {
  */
 export const markNotificationAsRead = async (id: string) => {
     try {
-        const response = await api.post(`/notifications/${id}/mark_as_read/`);
+        const response = await api.post(`/notifications/${id}/mark-as-read/`);
         clearNotificationsCache();
         return response.data;
     } catch (error: any) {
@@ -106,7 +106,7 @@ export const markNotificationAsRead = async (id: string) => {
 export const markAllAsRead = async () => {
     try {
         clearNotificationsCache();
-        const response = await api.post("/notifications/mark_all_as_read/");
+        const response = await api.post("/notifications/mark-all-as-read/");
         return response.data;
     } catch (error: any) {
         throw new Error(parseError(error));

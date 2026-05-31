@@ -86,6 +86,7 @@ const AccountSettings = () => {
                 country: locationData?.country || "Ethiopia",
                 city: locationData?.city || location.split(',')[0]?.trim() || "Addis Ababa",
                 subcity: locationData?.subcity || location.split(',')[1]?.trim() || "",
+                location: locationData?.displayName || location,
                 ...(locationData?.lat != null && { lat: locationData.lat }),
                 ...(locationData?.lng != null && { lng: locationData.lng }),
                 hourly_rate: Number(basePrice)
