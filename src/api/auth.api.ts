@@ -365,7 +365,7 @@ const USER_DETAILS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 const professionalProfileCache = new Map<string, { data: any; timestamp: number }>();
 const professionalProfileInFlight = new Map<string, Promise<any>>();
-const PROFESSIONAL_PROFILE_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const PROFESSIONAL_PROFILE_CACHE_TTL = 2 * 60 * 1000; // 2 minutes — keeps profile fresh after pro makes updates
 
 const isUserCacheFresh = (timestamp: number) => Date.now() - timestamp < USER_DETAILS_CACHE_TTL;
 const isProfileCacheFresh = (timestamp: number) => Date.now() - timestamp < PROFESSIONAL_PROFILE_CACHE_TTL;
@@ -608,9 +608,12 @@ export const updateProfessionalDetails = async (data: Record<string, any> | Form
   }
 };
 
-export const addPortfolioItem = async (file: File) => {
+export const addPortfolioItem = async (file: File, title?: string) => {
   const fd = new FormData();
   fd.append("file", file);
+  if (title) {
+    fd.append("title", title);
+  }
   const response = await api.post('/portfolios/', fd, {
     headers: { "Content-Type": "multipart/form-data" }
   });
@@ -655,6 +658,12 @@ export const getProfessionalProfile = async (id: string, bypassCache = false) =>
 
 export const clearProfessionalProfileCache = () => {
   professionalProfileCache.clear();
+  userDetailsCache.clear();
+};
+
+export const clearProfessionalProfileCacheById = (id: string) => {
+  professionalProfileCache.delete(id);
+  userDetailsCache.delete(id);
 };
 
 export default api;

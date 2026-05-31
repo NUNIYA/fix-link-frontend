@@ -18,6 +18,9 @@ export interface Message {
   text?: string;
   body?: string;
   content?: string;
+  // Attachment support (requires backend to add 'attachment' field to Message model)
+  attachment?: string;
+  attachment_url?: string;
   // Timestamp fields — backend may use any of these
   created_at?: string;
   createdAt?: string;
@@ -75,12 +78,33 @@ export const getMessages = async (conversationId: string): Promise<Message[]> =>
 };
 
 /**
- * Send a message to a conversation
+ * Send a message to a conversation.
  * POST /api/conversations/{id}/messages/
+ *
+ * When an image attachment is provided it is sent as multipart/form-data so
+ * the backend can save it.  A plain text message is sent as JSON.
+ *
+ * NOTE: Image sending requires the backend to add an `attachment` FileField to
+ * the Message model and accept MultiPartParser. Until then the attachment is
+ * sent but silently ignored — text messages always work.
  */
-export const sendMessage = async (conversationId: string, text: string): Promise<Message> => {
+export const sendMessage = async (
+  conversationId: string,
+  text: string,
+  attachment?: File | null,
+): Promise<Message> => {
   try {
-    const response = await api.post(`/conversations/${conversationId}/messages/`, { body: text });
+    let response;
+    if (attachment) {
+      const fd = new FormData();
+      if (text.trim()) fd.append("body", text.trim());
+      fd.append("attachment", attachment);
+      response = await api.post(`/conversations/${conversationId}/messages/`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    } else {
+      response = await api.post(`/conversations/${conversationId}/messages/`, { body: text });
+    }
     return response.data;
   } catch (error: any) {
     console.error(`sendMessage: failed for ${conversationId}`, error?.response?.data || error?.message || error);

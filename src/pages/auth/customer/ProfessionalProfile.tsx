@@ -29,6 +29,7 @@ import {
   createReview,
   getReviews,
   getProfessionalProfile,
+  clearProfessionalProfileCacheById,
 } from "../../../api/auth.api";
 import { getServiceCategories, listJobs } from "../../../api/jobs.api";
 
@@ -284,7 +285,42 @@ const ProfessionalProfile = () => {
     setProfileLanguages(Array.isArray(rawLanguages) ? rawLanguages : ["Amharic", "English"]);
     
     const rawPortfolio = userData.portfolio_files || userData.portfolio;
-    setProfilePortfolio(Array.isArray(rawPortfolio) ? rawPortfolio : []);
+    const portfolioArray = Array.isArray(rawPortfolio) ? rawPortfolio : [];
+    const normalizedPortfolio = portfolioArray.map((item: any) => {
+      if (item.url || item.img) return item;
+      
+      const fileUrl = item.file_url || item.file || "";
+      // Clean up relative URLs to have absolute format or leading slash
+      let cleanUrl = fileUrl;
+      if (cleanUrl && !cleanUrl.startsWith("http") && !cleanUrl.startsWith("/")) {
+        cleanUrl = "/" + cleanUrl;
+      }
+      
+      const isImage = /\.(jpg|jpeg|png|gif|webp|svg)($|\?)/i.test(cleanUrl);
+      
+      // Parse file name from path to use as fallback title since backend DB lacks a title field
+      let fileName = "Portfolio Artifact";
+      try {
+        const decodedUrl = decodeURIComponent(cleanUrl);
+        const parts = decodedUrl.split("/");
+        const lastPart = parts[parts.length - 1];
+        if (lastPart) {
+          fileName = lastPart;
+        }
+      } catch (e) {
+        console.warn("Error parsing filename for portfolio title", e);
+      }
+      
+      return {
+        id: item.id,
+        title: item.title || fileName,
+        type: isImage ? "image" : "file",
+        url: cleanUrl,
+        img: cleanUrl,
+        file: null
+      };
+    });
+    setProfilePortfolio(normalizedPortfolio);
     
     setProfileRating(userObj.average_rating || userObj.rating || 0);
     setProfileReviewsCount(userObj.total_jobs_completed || userObj.reviews_count || 0);
@@ -546,6 +582,7 @@ const ProfessionalProfile = () => {
           city: profileLocationData?.city || profileLocation.split(",")[1]?.trim() ? "Addis Ababa" : profileLocation.split(",")[0]?.trim() || "Addis Ababa",
           subcity: profileLocationData?.subcity || profileLocation.split(",")[0]?.trim() || profileLocation.split(",")[1]?.trim() || "",
           neighborhood: profileLocationData?.subcity || profileLocation.split(",")[1]?.trim() || "",
+          location: profileLocation,
           ...(profileLocationData?.lat != null && { lat: profileLocationData.lat }),
           ...(profileLocationData?.lng != null && { lng: profileLocationData.lng }),
           skills: profileSkills,
@@ -572,6 +609,11 @@ const ProfessionalProfile = () => {
 
         if (updated) {
           applyData(updated, serviceCategories);
+          // Bust ALL caches so the customer-side profile always sees fresh data immediately.
+          // This wipes both the in-memory API cache and the localStorage snapshot.
+          clearProfessionalProfileCacheById(user.id);
+          localStorage.removeItem(`prof_profile_${user.id}`);
+          // Re-store with fresh data
           localStorage.setItem(`prof_profile_${user.id}`, JSON.stringify(updated));
         }
 
@@ -665,12 +707,12 @@ const ProfessionalProfile = () => {
 
     if (newPortfolioFile) {
       try {
-        const uploadedItem = await addPortfolioItem(newPortfolioFile);
+        const uploadedItem = await addPortfolioItem(newPortfolioFile, newPortfolioTitle.trim());
 
         // Use the returned item from backend
         const newItem = {
           id: uploadedItem.id,
-          title: newPortfolioTitle.trim() || newPortfolioFile.name,
+          title: uploadedItem.title || newPortfolioTitle.trim() || newPortfolioFile.name,
           type: newPortfolioFile.type.includes("image") ? "image" : "file",
           url: uploadedItem.file_url || uploadedItem.file,
           img: uploadedItem.file_url || uploadedItem.file,

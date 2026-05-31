@@ -230,23 +230,50 @@ const CustomerMessages = () => {
         setSearchParams({ requestId: id });
     };
 
+    // Attachment state
+    const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+    const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
+    const attachmentInputRef = useRef<HTMLInputElement>(null);
+
+    const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] || null;
+        if (!file) return;
+        setAttachmentFile(file);
+        setAttachmentPreview(URL.createObjectURL(file));
+        // Reset so the same file can be re-selected
+        e.target.value = '';
+    };
+
+    const clearAttachment = () => {
+        if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+        setAttachmentFile(null);
+        setAttachmentPreview(null);
+    };
+
     const handleSendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         const text = messageInput.trim();
-        if (!text || !conversationId || isSending) return;
+        const hasAttachment = !!attachmentFile;
+        if (!text && !hasAttachment) return;
+        if (!conversationId || isSending) return;
 
         setIsSending(true);
         setMessageInput("");
+        // Capture and clear attachment immediately so UI resets
+        const fileToSend = attachmentFile;
+        const previewUrl = attachmentPreview;
+        clearAttachment();
 
-        // Optimistically append the message immediately so it always shows on
-        // the right side, even if the backend 500s after saving it.
+        // Optimistically append the message immediately
         const optimisticId = `optimistic-${Date.now()}`;
-        const optimisticMsg = {
+        const optimisticMsg: any = {
             id: optimisticId,
-            sender: 'customer', // role string the backend would return
+            sender: 'customer',
             body: text,
             text,
             content: text,
+            // Show the local blob URL in the bubble while sending
+            attachment_url: previewUrl || undefined,
             created_at: new Date().toISOString(),
             sent_at: new Date().toISOString(),
             is_read: false,
@@ -255,25 +282,23 @@ const CustomerMessages = () => {
         setMessages(prev => [...prev, optimisticMsg]);
 
         try {
-            const newMsg = await sendMessage(conversationId, text);
-            // Replace the optimistic message with the real server response
+            const newMsg = await sendMessage(conversationId, text, fileToSend);
             const msgWithTs = {
                 ...newMsg,
                 sender: newMsg?.sender || 'customer',
                 created_at: newMsg?.created_at || newMsg?.sent_at || newMsg?.timestamp || new Date().toISOString(),
+                // Prefer server URL; fall back to local preview if backend doesn't return one yet
+                attachment_url: newMsg?.attachment_url || newMsg?.attachment || previewUrl || undefined,
             };
             setMessages(prev => prev.map(m => m.id === optimisticId ? msgWithTs : m));
         } catch (error: any) {
             const status = error?.response?.status || 0;
             if (status === 500 || String(error?.message || '').includes('500')) {
-                // Backend saved the message but crashed on notification dispatch.
-                // Keep the optimistic message visible — it will be confirmed on next poll.
                 console.warn("CustomerMessages: Backend 500 on send (message was saved). Keeping optimistic message.");
             } else {
-                // Real send failure — remove the optimistic message and warn the user
                 console.error("CustomerMessages: Send failed", error);
                 setMessages(prev => prev.filter(m => m.id !== optimisticId));
-                setMessageInput(text); // Restore text so user can retry
+                setMessageInput(text);
                 alert("Failed to send message. Please try again.");
             }
         } finally {
@@ -756,7 +781,18 @@ const CustomerMessages = () => {
                                                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700/60 rounded-2xl rounded-tl-none shadow-sm'
                                                  }`}>
                                                      <div className="pb-6 text-pretty relative z-10">
-                                                         <p className="text-[12.5px] font-medium leading-[1.5] break-words">{msg.body || msg.text || msg.content}</p>
+                                                         {(msg.body || msg.text || msg.content) && (
+                                                             <p className="text-[12.5px] font-medium leading-[1.5] break-words">{msg.body || msg.text || msg.content}</p>
+                                                         )}
+                                                         {(msg as any).attachment_url && (
+                                                             <a href={(msg as any).attachment_url} target="_blank" rel="noopener noreferrer" className="block mt-1.5">
+                                                                 <img
+                                                                     src={(msg as any).attachment_url}
+                                                                     alt="attachment"
+                                                                     className="max-w-[220px] max-h-[220px] rounded-xl object-cover border border-white/20 shadow-md hover:opacity-90 transition-opacity"
+                                                                 />
+                                                             </a>
+                                                         )}
                                                      </div>
                                                      <div className={`absolute inset-x-3 bottom-2 flex items-center justify-between text-[8px] font-black tracking-tight select-none relative z-10 gap-4 ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
                                                          <span>{formatTime(msg)}</span>
@@ -782,7 +818,49 @@ const CustomerMessages = () => {
                                 </div>
                             </div>                             {/* Messaging Input */}
                              <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800/50">
-                                 <div className="flex items-center gap-3 max-w-5xl mx-auto">
+                                 {/* Attachment preview strip */}
+                                 {attachmentPreview && (
+                                     <div className="flex items-center gap-3 max-w-5xl mx-auto mb-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                         <div className="relative">
+                                             <img
+                                                 src={attachmentPreview}
+                                                 alt="preview"
+                                                 className="h-20 w-20 rounded-2xl object-cover border-2 border-primary/30 shadow-lg"
+                                             />
+                                             <button
+                                                 type="button"
+                                                 onClick={clearAttachment}
+                                                 className="absolute -top-2 -right-2 size-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600 transition-colors"
+                                             >
+                                                 <X size={11} strokeWidth={3} />
+                                             </button>
+                                         </div>
+                                         <span className="text-xs font-bold text-slate-400 truncate max-w-[180px]">{attachmentFile?.name}</span>
+                                     </div>
+                                 )}
+                                 <div className="flex items-center gap-2 max-w-5xl mx-auto">
+                                     {/* Hidden file input */}
+                                     <input
+                                         ref={attachmentInputRef}
+                                         type="file"
+                                         accept="image/*"
+                                         className="hidden"
+                                         onChange={handleAttachmentChange}
+                                     />
+                                     {/* Attach button */}
+                                     <button
+                                         type="button"
+                                         onClick={() => attachmentInputRef.current?.click()}
+                                         className={`size-10 flex items-center justify-center rounded-full transition-all shrink-0 ${
+                                             attachmentFile
+                                                 ? 'bg-primary/15 text-primary ring-2 ring-primary/30'
+                                                 : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-primary hover:bg-primary/10'
+                                         }`}
+                                         title="Attach image"
+                                         disabled={isSending}
+                                     >
+                                         <ImageIcon size={18} />
+                                     </button>
                                      <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-800 rounded-full px-5 py-1.5 ring-1 ring-slate-200/50 dark:ring-slate-700/50 focus-within:ring-primary/50 transition-all">
                                          <input
                                              className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none py-2.5"
@@ -796,7 +874,7 @@ const CustomerMessages = () => {
                                      <button
                                          type="submit"
                                          className="size-12 flex items-center justify-center bg-primary text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-md shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 group"
-                                         disabled={!messageInput.trim() || isSending || !conversationId}
+                                         disabled={(!messageInput.trim() && !attachmentFile) || isSending || !conversationId}
                                      >
                                          {isSending ? (
                                              <Loader2 size={20} className="animate-spin" />
