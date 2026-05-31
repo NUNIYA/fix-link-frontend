@@ -30,6 +30,7 @@ import {
   getReviews,
   getProfessionalProfile,
   clearProfessionalProfileCacheById,
+  getOwnProfessionalDetails,
 } from "../../../api/auth.api";
 import { getServiceCategories, listJobs } from "../../../api/jobs.api";
 
@@ -65,6 +66,7 @@ const ProfessionalProfile = () => {
   const isProView = window.location.pathname.startsWith("/professional");
   const [isEditing, setIsEditing] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Portfolio Modal State
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
@@ -190,7 +192,7 @@ const ProfessionalProfile = () => {
     "December",
   ];
 
-  const isUUID = (str: any) => typeof str === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
   const isGeneric = (str: any) => !str || isUUID(str) || str === "Professional Specialist" || str === "Service Professional" || str === "Member";
 
   const applyData = (userData: any, catList: any[]) => {
@@ -380,7 +382,51 @@ const ProfessionalProfile = () => {
         const end = new Date(calendarView.year, calendarView.month + 1, 0).toISOString().split('T')[0];
 
         // 2. Fetch fresh data from API
-        const freshUser = isProView ? await getUserDetails(targetId) : await getProfessionalProfile(targetId);
+        let freshUser: any;
+        if (isProView) {
+          // Pro view: fetch own user details, own professional details, AND public professional profile.
+          // We must fetch public profile too because the backend's private ProfessionalSerializer
+          // is often missing fields like `hourly_rate` that are present in the public serializer.
+          const [userDetails, proDetails, publicProDetails] = await Promise.all([
+            getUserDetails(targetId, true).catch(() => null),
+            getOwnProfessionalDetails().catch(() => null),
+            getProfessionalProfile(targetId, true).catch(() => null),
+          ]);
+          
+          freshUser = { ...userDetails };
+          if (publicProDetails) {
+            const { id: _pubId, user: _pubUser, ...pubFields } = publicProDetails;
+            freshUser = { ...freshUser, ...pubFields };
+          }
+          if (proDetails) {
+            const { id: _proId, user: _nestedUser, ...proFields } = proDetails;
+            // Safely merge proFields: do not overwrite valid data with null/undefined/empty
+            Object.keys(proFields).forEach((key) => {
+              const val = (proFields as any)[key];
+              if (val !== null && val !== undefined && val !== "") {
+                freshUser[key] = val;
+              }
+            });
+          }
+        } else {
+          // Customer view: fetch public user details and public professional profile
+          // We merge them because the public professional profile might be missing
+          // User-level fields (name, bio) if the backend serializer is misconfigured.
+          const [userDetails, publicProDetails] = await Promise.all([
+            getUserDetails(targetId, true).catch(() => null),
+            getProfessionalProfile(targetId, true).catch(() => null),
+          ]);
+          
+          if (userDetails && publicProDetails) {
+            const { id: _proId, user: _nestedUser, ...proFields } = publicProDetails;
+            freshUser = { ...userDetails, ...proFields };
+          } else if (publicProDetails) {
+            freshUser = publicProDetails;
+          } else if (userDetails) {
+            freshUser = userDetails;
+          }
+        }
+        console.log("[DEBUG] fetchProfileData targetId:", targetId, "freshUser:", freshUser);
 
         if (!isMounted) return;
 
@@ -424,7 +470,7 @@ const ProfessionalProfile = () => {
       isMounted = false;
       clearTimeout(timeoutId);
     };
-  }, [isProView, user?.id, id]);
+  }, [isProView, user?.id, id, refreshTrigger]);
 
   // Check if there is an accepted job between this customer and this professional
   // AND fetch all jobs for this professional to populate the calendar
@@ -579,8 +625,8 @@ const ProfessionalProfile = () => {
           bio: profileAbout,
           years_of_experience: Number(profileExperience),
           country: profileLocationData?.country || "Ethiopia",
-          city: profileLocationData?.city || profileLocation.split(",")[1]?.trim() ? "Addis Ababa" : profileLocation.split(",")[0]?.trim() || "Addis Ababa",
-          subcity: profileLocationData?.subcity || profileLocation.split(",")[0]?.trim() || profileLocation.split(",")[1]?.trim() || "",
+          city: profileLocationData?.city || (profileLocation.split(",")[1] ? profileLocation.split(",")[0].trim() : "Addis Ababa"),
+          subcity: profileLocationData?.subcity || (profileLocation.split(",")[1] ? profileLocation.split(",")[1].trim() : profileLocation.split(",")[0].trim() || ""),
           neighborhood: profileLocationData?.subcity || profileLocation.split(",")[1]?.trim() || "",
           location: profileLocation,
           ...(profileLocationData?.lat != null && { lat: profileLocationData.lat }),
@@ -588,6 +634,7 @@ const ProfessionalProfile = () => {
           skills: profileSkills,
           phonenumber: profilePhone,
           languages: profileLanguages,
+          hourly_rate: profilePrice,
           // Sync portfolio state (Note: Backend must support JSON or separate upload for images)
           portfolio: profilePortfolio.map(item => ({
             title: item.title,
@@ -599,26 +646,23 @@ const ProfessionalProfile = () => {
           available_days: availableDays
         };
 
-        // If we matched a service ID for the role, send it as profession
+        // If we matched a service ID for the role, send it as service_categories array
         if (profileServiceId) {
-          patch.profession = profileServiceId;
+          patch.service_categories = [profileServiceId];
         }
 
         // Call the centralized updateUser from AuthContext which handles API + state sync
         const updated = await updateUser(patch);
 
         if (updated) {
-          applyData(updated, serviceCategories);
-          // Bust ALL caches so the customer-side profile always sees fresh data immediately.
-          // This wipes both the in-memory API cache and the localStorage snapshot.
           clearProfessionalProfileCacheById(user.id);
           localStorage.removeItem(`prof_profile_${user.id}`);
-          // Re-store with fresh data
-          localStorage.setItem(`prof_profile_${user.id}`, JSON.stringify(updated));
-        }
+          
+          setRefreshTrigger((prev) => prev + 1);
 
-        setIsEditing(false);
-        alert("Profile updated successfully!");
+          alert("Profile updated successfully!");
+          setIsEditing(false);
+        }
       } catch (err: any) {
         console.error("Save failed:", err);
         const msg = err.message || "Failed to save changes. Please try again.";

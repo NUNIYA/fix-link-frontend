@@ -93,8 +93,9 @@ const AccountSettings = () => {
             });
             setUpdateSuccess(true);
             setTimeout(() => setUpdateSuccess(false), 3000);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
+            alert(error.message || "Failed to update profile. Please check the console for details.");
         } finally {
             setIsSaving(false);
         }

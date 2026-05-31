@@ -40,11 +40,14 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
   };
 
   const [locationOverride, setLocationOverride] = useState<string | null>(null);
+  const [priceOverride, setPriceOverride] = useState<number | null>(null);
+  const [roleOverride, setRoleOverride] = useState<string | null>(null);
 
   useEffect(() => {
-    // If base props have no detailed location, try to fetch public profile (cached in API)
-    const hasCity = Boolean((pro as any).city || (pro as any).subcity || (pro as any).neighborhood || (pro as any).area);
-    if (!hasCity && pro.id) {
+    // Always fetch public profile to ensure card shows latest price, category, and location.
+    // We remove the aggressive caching/lazy-loading here because the backend /users/ endpoint 
+    // does not provide hourly_rate or updated service_categories.
+    if (pro.id) {
       (async () => {
         try {
           const profile = await getProfessionalProfile(String(pro.id));
@@ -52,12 +55,21 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
           const subcity = profile?.subcity || profile?.neighborhood || '';
           const combined = [city, subcity].filter(Boolean).join(', ');
           if (combined) setLocationOverride(cleanLocation(combined));
+          
+          if (profile?.hourly_rate) setPriceOverride(Number(profile.hourly_rate));
+          
+          const categories = profile?.service_categories;
+          if (categories && Array.isArray(categories) && categories.length > 0) {
+            setRoleOverride(categories[0].name || categories[0]);
+          } else if (profile?.profession_name) {
+            setRoleOverride(profile.profession_name);
+          }
         } catch (err) {
           // ignore failures — expensive fetch avoided elsewhere
         }
       })();
     }
-  }, [pro.id]);
+  }, [pro.id, pro.price]);
 
   const locationFull = (() => {
     // Prefer fetched override first
@@ -101,7 +113,7 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
       <h3 className="text-2xl font-black text-slate-900 dark:text-white group-hover:text-primary transition-colors tracking-tight line-clamp-1 mb-1">
         {pro.name}
       </h3>
-      <p className="text-sm font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em] mb-4">{pro.role}</p>
+      <p className="text-sm font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em] mb-4">{roleOverride || pro.role}</p>
       
       <div className="flex items-center justify-center gap-4 mb-6">
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 group-hover:bg-amber-500/20 transition-colors">
@@ -118,7 +130,7 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
         <div className="text-left space-y-0.5">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60 transition-opacity group-hover:opacity-100">{t('common.starting_from')}</p>
           <div className="flex items-baseline gap-1">
-            <span className="text-lg font-black text-slate-900 dark:text-white transition-colors group-hover:text-primary">{pro.price}</span>
+            <span className="text-lg font-black text-slate-900 dark:text-white transition-colors group-hover:text-primary">{priceOverride ?? pro.price}</span>
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{t('common.etb')}</span>
           </div>
         </div>

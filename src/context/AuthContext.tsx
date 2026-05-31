@@ -144,7 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             if (user.role === "professional" && !(userData instanceof FormData)) {
                 // Split fields
-                const proFields = ["city", "subcity", "house_number", "location", "gender", "preferred_payout_method", "payout_account_number", "availability", "service_categories", "lat", "lng"];
+                const proFields = ["city", "subcity", "house_number", "location", "gender", "preferred_payout_method", "payout_account_number", "availability", "service_categories", "lat", "lng", "hourly_rate"];
                 const proData: Record<string, any> = {};
                 const userDataToUpdate: Partial<User> = {};
                 
@@ -182,9 +182,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         professional_id: proId // Keep it as a separate property
                     };
                     
-                    // If the response has a nested user object, merge its fields
+                    // If the response has a nested user object, merge its fields.
+                    // IMPORTANT: Do NOT let the nested user overwrite Professional-level location fields
+                    // (city, subcity, location, latitude, longitude) — those were just saved on the Professional
+                    // model and are already in newUserData from the proFields spread above.
                     if (updatedPro.user) {
-                        newUserData = { ...newUserData, ...updatedPro.user };
+                        const { city, subcity, location, latitude, longitude, house_number, ...safeUserFields } = updatedPro.user;
+                        newUserData = { ...newUserData, ...safeUserFields };
                     }
                 }
             } else {
@@ -196,6 +200,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.log("AuthContext: Profile update success, syncing local state", newUserData.id);
             setUser(newUserData);
             localStorage.setItem("user", JSON.stringify(newUserData));
+            
+            // Bust caches so customer-side profile always sees fresh data immediately.
+            const { clearProfessionalProfileCacheById } = await import("../api/auth.api");
+            clearProfessionalProfileCacheById(newUserData.id);
+            localStorage.removeItem(`prof_profile_${newUserData.id}`);
+
             return newUserData;
         } catch (error) {
             console.error("Failed to update user profile on server:", error);

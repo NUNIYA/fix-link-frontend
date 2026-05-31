@@ -370,14 +370,17 @@ const PROFESSIONAL_PROFILE_CACHE_TTL = 2 * 60 * 1000; // 2 minutes — keeps pro
 const isUserCacheFresh = (timestamp: number) => Date.now() - timestamp < USER_DETAILS_CACHE_TTL;
 const isProfileCacheFresh = (timestamp: number) => Date.now() - timestamp < PROFESSIONAL_PROFILE_CACHE_TTL;
 
-export const getUserDetails = async (id: string) => {
-  const cached = userDetailsCache.get(id);
-  if (cached && isUserCacheFresh(cached.timestamp)) {
-    return cached.data;
+export const getUserDetails = async (id: string, bypassCache = false) => {
+  if (!bypassCache) {
+    const cached = userDetailsCache.get(id);
+    if (cached && isUserCacheFresh(cached.timestamp)) {
+      return cached.data;
+    }
   }
 
   try {
-    const response = await api.get(`/users/${id}/`);
+    const endpoint = bypassCache ? `/users/${id}/?_t=${Date.now()}` : `/users/${id}/`;
+    const response = await api.get(endpoint);
     const payload = response.data;
     userDetailsCache.set(id, { data: payload, timestamp: Date.now() });
     return payload;
@@ -405,6 +408,29 @@ export const clearUserDetailsCache = () => {
 };
 
 /**
+ * Fetch the authenticated professional's own Professional model data.
+ * This is distinct from getUserDetails (which only reads the User model).
+ * Fields like city, subcity, location, hourly_rate, service_categories are
+ * stored on the Professional model and ONLY returned by this endpoint.
+ * Endpoint: GET /users/professional-detail/
+ */
+export const getOwnProfessionalDetails = async () => {
+  try {
+    const response = await api.get(`/users/professional-detail/?_t=${Date.now()}`);
+    return response.data;
+  } catch (error: any) {
+    console.warn('getOwnProfessionalDetails: failed', error?.response?.status);
+    return null;
+  }
+};
+
+const formatLatLong = (val: any) => {
+  if (val === undefined || val === null || val === '') return undefined;
+  const num = Number(val);
+  return isNaN(num) ? undefined : Number(num.toFixed(6));
+};
+
+/**
  * Update User Profile
  * Supports both JSON and FormData (for images)
  */
@@ -420,8 +446,10 @@ export const updateUserProfile = async (id: string, data: Partial<User> | FormDa
         phonenumber: (data as any).phone || (data as any).phonenumber,
         bio: data.bio || (data as any).shortBio,
         profession: data.profession || (data as any).serviceCategory,
-        years_of_experience: data.years_of_experience || Number((data as any).yearsOfExperience)
-      };
+        years_of_experience: data.years_of_experience !== undefined ? data.years_of_experience : ((data as any).yearsOfExperience !== undefined ? Number((data as any).yearsOfExperience) : undefined),
+        latitude: formatLatLong((data as any).lat !== undefined ? (data as any).lat : (data as any).latitude),
+        longitude: formatLatLong((data as any).lng !== undefined ? (data as any).lng : (data as any).longitude)
+      } as any;
 
       // Remove null/undefined/phone (since we mapped it) to avoid overwriting with empty
       Object.keys(payload).forEach(key => {
@@ -440,7 +468,7 @@ export const updateUserProfile = async (id: string, data: Partial<User> | FormDa
     userDetailsCache.delete(id);
     return response.data;
   } catch (error: any) {
-    throw new Error(error.response?.data?.detail || "Failed to update profile");
+    throw new Error(parseError(error) || "Failed to update profile");
   }
 };
 
@@ -591,16 +619,31 @@ export const updateProfessionalDetails = async (data: Record<string, any> | Form
           if (Array.isArray(val)) {
             val.forEach((item) => formData.append(key, String(item)));
           } else {
-            formData.append(key, String(val));
+            let appendVal = val;
+            if (key === 'latitude' || key === 'longitude') {
+              const formatted = formatLatLong(val);
+              if (formatted !== undefined) {
+                appendVal = formatted;
+              }
+            }
+            formData.append(key, String(appendVal));
           }
         }
       });
       payload = formData;
     }
 
+    // DEBUG: Log exactly what we're sending
+    if (payload instanceof FormData) {
+      const entries: Record<string, any> = {};
+      (payload as FormData).forEach((value, key) => { entries[key] = value; });
+      console.log('[DEBUG] updateProfessionalDetails SENDING:', entries);
+    }
+
     const response = await api.patch('/users/professional-detail/', payload, {
       headers: { "Content-Type": "multipart/form-data" }
     });
+    console.log('[DEBUG] updateProfessionalDetails RESPONSE:', response.data);
     clearUserDetailsCache();
     return response.data;
   } catch (error: any) {
@@ -640,7 +683,7 @@ export const getProfessionalProfile = async (id: string, bypassCache = false) =>
   }
 
   const request = api
-    .get(`/users/${id}/professional-profile/`)
+    .get(`/users/${id}/professional-profile/?_t=${Date.now()}`)
     .then((response) => {
       professionalProfileCache.set(id, { data: response.data, timestamp: Date.now() });
       return response.data;
