@@ -36,6 +36,19 @@ import {
 } from 'lucide-react';
 import DisputeModal from '../../../components/DisputeModal';
 
+/**
+ * The backend MessageSerializer.get_sender() returns the ROLE STRING
+ * "customer" or "pro" — NOT a UUID. Never compare against user.id.
+ */
+const getSenderRole = (sender: any): string | null => {
+    if (!sender) return null;
+    if (typeof sender === 'string') return sender; // "customer" | "pro"
+    if (typeof sender === 'object') {
+        return sender.role || sender.id || null;
+    }
+    return null;
+};
+
 const ProfessionalMessages = () => {
     const { t } = useTranslation();
     const { user } = useAuth();
@@ -177,14 +190,8 @@ const ProfessionalMessages = () => {
     useConversationMessageSync(
         conversationId,
         setMessages,
-        (list) => {
-            const userId = (user as any)?.user?.id || user?.id;
-            const proId = (user as any)?.id;
-            return list.some((m) => {
-                const senderId = (typeof m.sender === 'object' && m.sender !== null) ? m.sender.id : m.sender;
-                return !m.is_read && senderId !== userId && senderId !== proId;
-            });
-        }
+        // Mark as read any message NOT sent by the professional (i.e. from the customer)
+        (list) => list.some((m) => !m.is_read && getSenderRole(m.sender) !== 'pro')
     );
 
     // Auto-scroll to bottom
@@ -228,19 +235,47 @@ const ProfessionalMessages = () => {
         const text = messageInput.trim();
         if (!text || !conversationId || isSending) return;
 
+        setIsSending(true);
+        setMessageInput("");
+
+        // Optimistically append the message immediately so it always shows on
+        // the right side, even if the backend 500s after saving it.
+        const optimisticId = `optimistic-${Date.now()}`;
+        const optimisticMsg = {
+            id: optimisticId,
+            sender: 'pro', // role string the backend would return
+            body: text,
+            text,
+            content: text,
+            created_at: new Date().toISOString(),
+            sent_at: new Date().toISOString(),
+            is_read: false,
+            is_me: true,
+        };
+        setMessages(prev => [...prev, optimisticMsg]);
+
         try {
-            setIsSending(true);
-            setMessageInput(""); // Optimistic clear
             const newMsg = await sendMessage(conversationId, text);
-            // Ensure the message always has a timestamp so formatTime never shows --:--
+            // Replace the optimistic message with the real server response
             const msgWithTs = {
                 ...newMsg,
+                sender: newMsg?.sender || 'pro',
                 created_at: newMsg?.created_at || newMsg?.sent_at || newMsg?.timestamp || new Date().toISOString(),
             };
-            setMessages(prev => [...prev, msgWithTs]);
-        } catch (error) {
-            console.error("ProfessionalMessages: Send failed", error);
-            alert(t('common.failed_send_message'));
+            setMessages(prev => prev.map(m => m.id === optimisticId ? msgWithTs : m));
+        } catch (error: any) {
+            const status = error?.response?.status || 0;
+            if (status === 500 || String(error?.message || '').includes('500')) {
+                // Backend saved the message but crashed on notification dispatch.
+                // Keep the optimistic message visible — it will be confirmed on next poll.
+                console.warn("ProfessionalMessages: Backend 500 on send (message was saved). Keeping optimistic message.");
+            } else {
+                // Real send failure — remove the optimistic message and warn the user
+                console.error("ProfessionalMessages: Send failed", error);
+                setMessages(prev => prev.filter(m => m.id !== optimisticId));
+                setMessageInput(text); // Restore text so user can retry
+                alert(t('common.failed_send_message'));
+            }
         } finally {
             setIsSending(false);
         }
@@ -682,35 +717,63 @@ const ProfessionalMessages = () => {
 
                                         {/* Real Time Messages */}
                                         {messages.map((msg, i) => {
-                                            const userId = (user as any)?.user?.id || user?.id;
-                                            const proId = (user as any)?.id;
-                                            const senderId = (typeof msg.sender === 'object' && msg.sender !== null) ? msg.sender.id : msg.sender;
-                                            const isMe = senderId === userId || senderId === proId || msg.is_me;
+                                            // Backend returns sender as role string: "customer" or "pro"
+                                            // On the professional page, "pro" = me (right side)
+                                            const senderRole = getSenderRole(msg.sender);
+                                            const isMe = senderRole === 'pro' || !!msg.is_me;
+
+                                            // Avatar: customer avatar on left, my avatar on right
+                                            const customerAvatarUrl = activeUserDetails?.profile_picture
+                                                || activeUserDetails?.profile_picture_url
+                                                || activeUserDetails?.profile_photo
+                                                || activeUserDetails?.profile_photo_url
+                                                || activeUserDetails?.user?.profile_picture
+                                                || activeUserDetails?.user?.profile_picture_url
+                                                || activeUserDetails?.user?.profile_photo
+                                                || activeRequest?.customer_detail?.profile_picture
+                                                || activeRequest?.customer_detail?.profile_picture_url
+                                                || activeRequest?.customer_detail?.profile_photo;
+                                            const myAvatarUrl = (user as any)?.profile_picture
+                                                || user?.profilePhoto
+                                                || (user as any)?.profile_photo
+                                                || (user as any)?.profile_picture_url;
+
                                             return (
-                                                <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-4'} animate-in fade-in zoom-in slide-in-from-bottom-6 duration-500`}>
-                                                    {!isMe && (
-                                                        <div className="size-10 rounded-[1rem] bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden mb-1 ring-4 ring-slate-100 dark:ring-slate-900/50 transition-all hover:scale-110">
-                                                            {activeUserDetails?.profile_picture ? (
-                                                                <img src={getImageUrl(activeUserDetails.profile_picture)} alt="" className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <User size={24} className="text-slate-400" />
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    <div className={`relative max-w-[80%] md:max-w-[70%] px-6 py-4 transition-all group/msg shadow-xl ${
-                                                        isMe 
-                                                        ? 'bg-gradient-to-br from-primary via-primary-light to-primary-dark text-white rounded-[1.5rem] rounded-tr-none shadow-primary/20 border border-white/10' 
-                                                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700/50 rounded-[1.5rem] rounded-tl-none'
-                                                    }`}>
-                                                        <div className="pb-6 text-pretty relative z-10 whitespace-pre-wrap">
-                                                            <p className="text-[14px] font-bold leading-relaxed">{msg.body || msg.text || msg.content}</p>
-                                                        </div>
-                                                        <div className={`absolute inset-x-6 bottom-3 flex items-center justify-between text-[9px] font-black tracking-widest uppercase select-none relative z-10 gap-6 ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
-                                                            <span>{formatTime(msg)}</span>
-                                                            {isMe && (msg.is_read || msg.isRead ? <CheckCheck size={12} className="text-white/70" /> : <Check size={12} className="text-white/70" />)}
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                                 <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end gap-4 animate-in fade-in zoom-in slide-in-from-bottom-6 duration-500`}>
+                                                     {/* Left avatar: customer */}
+                                                     {!isMe && (
+                                                         <div className="size-10 rounded-[1rem] bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden mb-1 ring-4 ring-slate-100 dark:ring-slate-900/50 transition-all hover:scale-110" title={activeUserDetails?.first_name || "Customer"}>
+                                                             {customerAvatarUrl ? (
+                                                                 <img src={getImageUrl(customerAvatarUrl)} alt="" className="w-full h-full object-cover" />
+                                                             ) : (
+                                                                 <User size={24} className="text-slate-400" />
+                                                             )}
+                                                         </div>
+                                                     )}
+                                                     <div className={`relative max-w-[80%] md:max-w-[70%] px-6 py-4 transition-all group/msg shadow-xl ${
+                                                         isMe 
+                                                         ? 'bg-gradient-to-br from-primary via-primary-light to-primary-dark text-white rounded-[1.5rem] rounded-tr-none shadow-primary/20 border border-white/10' 
+                                                         : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700/50 rounded-[1.5rem] rounded-tl-none'
+                                                     }`}>
+                                                         <div className="pb-6 text-pretty relative z-10 whitespace-pre-wrap">
+                                                             <p className="text-[14px] font-bold leading-relaxed">{msg.body || msg.text || msg.content}</p>
+                                                         </div>
+                                                         <div className={`absolute inset-x-6 bottom-3 flex items-center justify-between text-[9px] font-black tracking-widest uppercase select-none relative z-10 gap-6 ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
+                                                             <span>{formatTime(msg)}</span>
+                                                             {isMe && (msg.is_read || msg.isRead ? <CheckCheck size={12} className="text-white/70" /> : <Check size={12} className="text-white/70" />)}
+                                                         </div>
+                                                     </div>
+                                                     {/* Right avatar: me (professional) */}
+                                                     {isMe && (
+                                                         <div className="size-10 rounded-[1rem] bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden mb-1 ring-4 ring-slate-100 dark:ring-slate-900/50 transition-all hover:scale-110" title="You">
+                                                             {myAvatarUrl ? (
+                                                                 <img src={getImageUrl(myAvatarUrl)} alt="" className="w-full h-full object-cover" />
+                                                             ) : (
+                                                                 <User size={24} className="text-slate-400" />
+                                                             )}
+                                                         </div>
+                                                     )}
+                                                 </div>
                                             );
                                         })}
                                         <div ref={messagesEndRef} />

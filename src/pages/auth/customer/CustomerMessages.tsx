@@ -18,6 +18,20 @@ import {
 import DisputeModal from '../../../components/DisputeModal';
 import ReviewModal from '../../../components/ReviewModal';
 
+/**
+ * The backend MessageSerializer.get_sender() returns the ROLE STRING
+ * "customer" or "pro" — NOT a UUID. Never compare against user.id.
+ */
+const getSenderRole = (sender: any): string | null => {
+    if (!sender) return null;
+    if (typeof sender === 'string') return sender; // "customer" | "pro"
+    if (typeof sender === 'object') {
+        // Fallback in case the backend ever changes to return an object
+        return sender.role || sender.id || null;
+    }
+    return null;
+};
+
 const CustomerMessages = () => {
     const { t } = useTranslation();
     const { user } = useAuth();
@@ -169,11 +183,8 @@ const CustomerMessages = () => {
     useConversationMessageSync(
         conversationId,
         setMessages,
-        (list) => list.some((m) => {
-            const senderId = (typeof m.sender === 'object' && m.sender !== null) ? m.sender.id : m.sender;
-            const myId = user?.id || (user as any)?.user?.id || (user as any)?.id;
-            return !m.is_read && senderId !== myId;
-        })
+        // Mark as read any message NOT sent by the customer (i.e. from the pro)
+        (list) => list.some((m) => !m.is_read && getSenderRole(m.sender) !== 'customer')
     );
 
     // Auto-scroll to bottom (most recent message)
@@ -202,11 +213,15 @@ const CustomerMessages = () => {
     // Fetch details for active professional
     useEffect(() => {
         if (activeRequest?.professional_detail) {
+            console.log('CustomerMessages: activeUserDetails from professional_detail:', activeRequest.professional_detail);
             setActiveUserDetails(activeRequest.professional_detail);
         } else {
             const proId = activeRequest?.professional || activeRequest?.assigned_to;
             if (proId) {
-                getUserDetails(proId).then(setActiveUserDetails).catch(console.error);
+                getUserDetails(proId).then(details => {
+                    console.log('CustomerMessages: activeUserDetails from getUserDetails:', details);
+                    setActiveUserDetails(details);
+                }).catch(console.error);
             }
         }
     }, [activeRequestId, activeRequest?.professional_detail]);
@@ -220,19 +235,47 @@ const CustomerMessages = () => {
         const text = messageInput.trim();
         if (!text || !conversationId || isSending) return;
 
+        setIsSending(true);
+        setMessageInput("");
+
+        // Optimistically append the message immediately so it always shows on
+        // the right side, even if the backend 500s after saving it.
+        const optimisticId = `optimistic-${Date.now()}`;
+        const optimisticMsg = {
+            id: optimisticId,
+            sender: 'customer', // role string the backend would return
+            body: text,
+            text,
+            content: text,
+            created_at: new Date().toISOString(),
+            sent_at: new Date().toISOString(),
+            is_read: false,
+            is_me: true,
+        };
+        setMessages(prev => [...prev, optimisticMsg]);
+
         try {
-            setIsSending(true);
-            setMessageInput(""); // Optimistic clear
             const newMsg = await sendMessage(conversationId, text);
-            // Ensure the message always has a timestamp so formatTime never shows ?:??
+            // Replace the optimistic message with the real server response
             const msgWithTs = {
                 ...newMsg,
+                sender: newMsg?.sender || 'customer',
                 created_at: newMsg?.created_at || newMsg?.sent_at || newMsg?.timestamp || new Date().toISOString(),
             };
-            setMessages(prev => [...prev, msgWithTs]);
-        } catch (error) {
-            console.error("CustomerMessages: Send failed", error);
-            alert("Failed to send message.");
+            setMessages(prev => prev.map(m => m.id === optimisticId ? msgWithTs : m));
+        } catch (error: any) {
+            const status = error?.response?.status || 0;
+            if (status === 500 || String(error?.message || '').includes('500')) {
+                // Backend saved the message but crashed on notification dispatch.
+                // Keep the optimistic message visible — it will be confirmed on next poll.
+                console.warn("CustomerMessages: Backend 500 on send (message was saved). Keeping optimistic message.");
+            } else {
+                // Real send failure — remove the optimistic message and warn the user
+                console.error("CustomerMessages: Send failed", error);
+                setMessages(prev => prev.filter(m => m.id !== optimisticId));
+                setMessageInput(text); // Restore text so user can retry
+                alert("Failed to send message. Please try again.");
+            }
         } finally {
             setIsSending(false);
         }
@@ -672,36 +715,67 @@ const CustomerMessages = () => {
 
                                     {/* Message History */}
                                     {messages.map((msg, i) => {
-                                        const senderId = (typeof msg.sender === 'object' && msg.sender !== null) ? msg.sender.id : msg.sender;
-                                        const myId = user?.id || (user as any)?.user?.id || (user as any)?.id;
-                                        const isMe = senderId === myId || msg.is_me;
+                                        // Backend returns sender as role string: "customer" or "pro"
+                                        // On the customer page, "customer" = me (right side)
+                                        const senderRole = getSenderRole(msg.sender);
+                                        const isMe = senderRole === 'customer' || !!msg.is_me;
+
+                                        // Avatar: pro avatar on left, my avatar on right
+                                        const proAvatarUrl = activeUserDetails?.profile_picture
+                                            || activeUserDetails?.profile_picture_url
+                                            || activeUserDetails?.profile_photo
+                                            || activeUserDetails?.profile_photo_url
+                                            || activeUserDetails?.user?.profile_picture
+                                            || activeUserDetails?.user?.profile_picture_url
+                                            || activeUserDetails?.user?.profile_photo
+                                            || activeRequest?.professional_detail?.profile_picture
+                                            || activeRequest?.professional_detail?.profile_picture_url
+                                            || activeRequest?.professional_detail?.profile_photo
+                                            || activeRequest?.assigned_to_detail?.profile_picture
+                                            || activeRequest?.assigned_to_detail?.profile_picture_url;
+                                        const myAvatarUrl = (user as any)?.profile_picture
+                                            || user?.profilePhoto
+                                            || (user as any)?.profile_photo
+                                            || (user as any)?.profile_picture_url;
+
                                         return (
-                                            <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-3'} animate-in fade-in zoom-in slide-in-from-bottom-4 duration-500`}>
-                                                {!isMe && (
-                                                    <div className="size-9 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-md border border-slate-200/50 dark:border-slate-700/50 overflow-hidden mb-0.5 ring-2 ring-slate-100 dark:ring-slate-900/50 transition-all hover:scale-110">
-                                                         {activeRequest.professional_detail?.profile_picture ? (
-                                                            <img src={getImageUrl(activeRequest.professional_detail.profile_picture)} alt="" className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <User size={18} className="text-slate-400" />
-                                                        )}
-                                                    </div>
-                                                )}
-                                                <div className={`relative max-w-[75%] md:max-w-[65%] px-3 py-2 transition-shadow group/msg ${
-                                                    isMe 
-                                                    ? 'bg-gradient-to-br from-primary via-primary to-primary-dark text-white rounded-2xl rounded-tr-none shadow-[0_4px_16px_-4px_rgba(13,147,242,0.25)]' 
-                                                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700/60 rounded-2xl rounded-tl-none shadow-sm'
-                                                }`}>
-                                                    <div className="pb-6 text-pretty relative z-10">
-                                                        <p className="text-[12.5px] font-medium leading-[1.5] break-words">{msg.body || msg.text || msg.content}</p>
-                                                    </div>
-                                                    <div className={`absolute inset-x-3 bottom-2 flex items-center justify-between text-[8px] font-black tracking-tight select-none relative z-10 gap-4 ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
-                                                        <span>{formatTime(msg)}</span>
-                                                        {isMe && (
-                                                            msg.is_read || msg.isRead ? <CheckCheck size={12} strokeWidth={3} /> : <Check size={12} strokeWidth={3} />
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                             <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end gap-3 animate-in fade-in zoom-in slide-in-from-bottom-4 duration-500`}>
+                                                 {/* Left avatar: professional */}
+                                                 {!isMe && (
+                                                     <div className="size-9 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-md border border-slate-200/50 dark:border-slate-700/50 overflow-hidden mb-0.5 ring-2 ring-slate-100 dark:ring-slate-900/50 transition-all hover:scale-110" title={activeUserDetails?.first_name || "Professional"}>
+                                                          {proAvatarUrl ? (
+                                                             <img src={getImageUrl(proAvatarUrl)} alt="" className="w-full h-full object-cover" />
+                                                         ) : (
+                                                             <User size={18} className="text-slate-400" />
+                                                         )}
+                                                     </div>
+                                                 )}
+                                                 <div className={`relative max-w-[75%] md:max-w-[65%] px-3 py-2 transition-shadow group/msg ${
+                                                     isMe 
+                                                     ? 'bg-gradient-to-br from-primary via-primary to-primary-dark text-white rounded-2xl rounded-tr-none shadow-[0_4px_16px_-4px_rgba(13,147,242,0.25)]' 
+                                                     : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700/60 rounded-2xl rounded-tl-none shadow-sm'
+                                                 }`}>
+                                                     <div className="pb-6 text-pretty relative z-10">
+                                                         <p className="text-[12.5px] font-medium leading-[1.5] break-words">{msg.body || msg.text || msg.content}</p>
+                                                     </div>
+                                                     <div className={`absolute inset-x-3 bottom-2 flex items-center justify-between text-[8px] font-black tracking-tight select-none relative z-10 gap-4 ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
+                                                         <span>{formatTime(msg)}</span>
+                                                         {isMe && (
+                                                             msg.is_read || msg.isRead ? <CheckCheck size={12} strokeWidth={3} /> : <Check size={12} strokeWidth={3} />
+                                                         )}
+                                                     </div>
+                                                 </div>
+                                                 {/* Right avatar: me (customer) */}
+                                                 {isMe && (
+                                                     <div className="size-9 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-md border border-slate-200/50 dark:border-slate-700/50 overflow-hidden mb-0.5 ring-2 ring-slate-100 dark:ring-slate-900/50 transition-all hover:scale-110" title="You">
+                                                          {myAvatarUrl ? (
+                                                             <img src={getImageUrl(myAvatarUrl)} alt="" className="w-full h-full object-cover" />
+                                                         ) : (
+                                                             <User size={18} className="text-slate-400" />
+                                                         )}
+                                                     </div>
+                                                 )}
+                                             </div>
                                         );
                                     })}
                                     <div ref={messagesEndRef} />

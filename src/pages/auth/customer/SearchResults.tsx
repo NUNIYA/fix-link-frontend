@@ -6,11 +6,72 @@ import ProfessionalCard from "./components/ProfessionalCard";
 import CustomerFooter from "./components/CustomerFooter";
 import FiltersSidebar from "./components/FiltersSidebar";
 import { getProfessionals, getServiceCategories } from "../../../api/jobs.api";
+import { getProfessionalProfile } from "../../../api/auth.api";
 import { 
   Search, ArrowUpDown, 
   Loader2, SearchX, ChevronDown,
-  Check, Star, Briefcase
+  Check, Star, Briefcase, MapPin
 } from "lucide-react";
+
+// Normalizes strings for robust matching by removing commas, periods, hyphens, and extra spaces
+const cleanForMatching = (str: string): string => {
+  let cleaned = str.toLowerCase().replace(/[,.\-_]/g, ' ').replace(/\s+/g, ' ').trim();
+  // Map common spelling variations and typos in Addis Ababa locations
+  cleaned = cleaned.replace(/gullele/g, 'gulele'); // standardize gullele to gulele
+  cleaned = cleaned.replace(/akaky/g, 'akaki');   // standardize akaky to akaki
+  cleaned = cleaned.replace(/nefas/g, 'nifas');   // standardize nefas to nifas
+  cleaned = cleaned.replace(/piasa/g, 'piassa');  // standardize piasa to piassa
+  return cleaned;
+};
+
+// Client-side mapping of Addis Ababa subcities and neighborhoods to coordinates
+const SUBCITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  "bole": { lat: 9.02, lng: 38.78 },
+  "yeka": { lat: 9.04, lng: 38.81 },
+  "arada": { lat: 9.03, lng: 38.75 },
+  "kirkos": { lat: 9.01, lng: 38.76 },
+  "lideta": { lat: 9.01, lng: 38.73 },
+  "gullele": { lat: 9.06, lng: 38.72 },
+  "kolfe keranio": { lat: 9.02, lng: 38.70 },
+  "akaky kaliti": { lat: 8.92, lng: 38.79 },
+  "nifas silk-lafto": { lat: 8.97, lng: 38.72 },
+  "kazanchis": { lat: 9.02, lng: 38.77 },
+  "megenagna": { lat: 9.02, lng: 38.80 },
+  "cmc": { lat: 9.03, lng: 38.83 },
+  "summit": { lat: 9.03, lng: 38.85 },
+  "gerji": { lat: 9.01, lng: 38.80 },
+  "piassa": { lat: 9.04, lng: 38.75 },
+  "mexico": { lat: 9.01, lng: 38.74 },
+  "saris": { lat: 8.97, lng: 38.76 },
+  "gotera": { lat: 8.99, lng: 38.77 },
+  "ayat": { lat: 9.02, lng: 38.86 },
+  "lafto": { lat: 8.96, lng: 38.73 },
+};
+
+const getCoordinatesForSubcity = (subcity: string, city: string, location: string): { lat: number; lng: number } => {
+  const norm = `${subcity} ${location} ${city}`.toLowerCase();
+  for (const [key, coords] of Object.entries(SUBCITY_COORDINATES)) {
+    if (norm.includes(key)) {
+      return coords;
+    }
+  }
+  return { lat: 9.03, lng: 38.74 }; // Default to Addis Ababa center coordinates
+};
+
+// Haversine distance calculator in km
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371; // Radius of the Earth in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 
 const SearchResults = () => {
     const { t } = useTranslation();
@@ -39,11 +100,7 @@ const SearchResults = () => {
         const fetchAndEnrich = async () => {
             try {
                 const [userData, categoriesData] = await Promise.all([
-                    getProfessionals(
-                        latQuery && lngQuery
-                        ? { lat: Number(latQuery), lng: Number(lngQuery) }
-                        : undefined
-                    ),
+                    getProfessionals(),
                     getServiceCategories()
                 ]);
 
@@ -69,29 +126,55 @@ const SearchResults = () => {
                     (u: any) => u.role === 'professional' || u.is_professional || u.user?.role === 'professional'
                 );
 
-                const baseCards = proList.map((prof: any) => {
+                // Fetch detailed profile for all professionals in parallel to get their city, subcity, location, and service category lists
+                const enrichedProList = await Promise.all(
+                    proList.map(async (prof: any) => {
+                        try {
+                            const profId = prof.id || prof.user?.id;
+                            if (profId) {
+                                const detail = await getProfessionalProfile(String(profId));
+                                return { ...prof, ...detail };
+                            }
+                            return prof;
+                        } catch (err) {
+                            return prof;
+                        }
+                    })
+                );
+
+                const baseCards = enrichedProList.map((prof: any) => {
                     const ud = prof.user || {};
                     const yoe = Number(prof.years_of_experience || ud.years_of_experience || 0);
-                    const locationParts = [
-                        prof.city || ud.city,
-                        prof.subcity || ud.subcity,
-                        prof.location,
-                        prof.neighborhood || ud.neighborhood,
-                    ]
+                    
+                    const city = prof.city || ud.city || '';
+                    const subcity = prof.subcity || ud.subcity || '';
+                    const locationText = prof.location || '';
+                    const neighborhood = prof.neighborhood || ud.neighborhood || '';
+
+                    const locationParts = [city, subcity, locationText, neighborhood]
                         .filter(Boolean)
                         .map((part: string) => part.trim());
                     const location = locationParts.length > 0 ? locationParts.join(', ') : 'Addis Ababa';
+
+                    const resolvedCoords = getCoordinatesForSubcity(subcity, city, locationText);
+                    const dist = (latQuery && lngQuery)
+                        ? calculateDistance(Number(latQuery), Number(lngQuery), resolvedCoords.lat, resolvedCoords.lng)
+                        : null;
 
                     return {
                         id: ud.id || prof.user_id || (typeof prof.user === 'string' ? prof.user : null) || prof.id,
                         name: `${prof.first_name || ud.first_name || ''} ${prof.last_name || ud.last_name || ''}`.trim() || prof.username || ud.username || t('common.anonymous_pro'),
                         role: t(`categories.${categoryMap[prof.profession || ud.profession] || prof.profession || ud.profession}`, { defaultValue: categoryMap[prof.profession || ud.profession] || t('common.professional') }),
+                        profession: prof.profession || ud.profession || '',
+                        categories: Array.isArray(prof.service_categories) 
+                            ? prof.service_categories.map((c: any) => c.name || "")
+                            : [],
                         rating: prof.average_rating || prof.rating || 0,
                         reviews: prof.total_jobs_completed || prof.reviews_count || 0,
                         price: prof.hourly_rate || 0,
                         verified: prof.is_verified_professional || false,
-                        city: prof.city || ud.city || '',
-                        subcity: prof.subcity || ud.subcity || '',
+                        city,
+                        subcity,
                         location,
                         searchLocation: location.toLowerCase(),
                         image: getImageUrl(prof.profile_picture || ud.profile_picture),
@@ -103,14 +186,23 @@ const SearchResults = () => {
                             if (typeof raw === 'string' && raw.trim()) return raw.split(',').map((l: string) => l.trim()).filter(Boolean);
                             return [];
                         })(),
+                        lat: resolvedCoords.lat,
+                        lng: resolvedCoords.lng,
+                        distance: dist,
                     };
                 });
 
                 const filteredByService = serviceQuery
                     ? baseCards.filter((p: any) => {
                         const localizedQuery = t(`categories.${serviceQuery}`, { defaultValue: serviceQuery }).toLowerCase();
+                        const matchesCategoryList = p.categories && p.categories.some((catName: string) => 
+                            catName.toLowerCase().includes(serviceQuery.toLowerCase()) ||
+                            catName.toLowerCase().includes(localizedQuery)
+                        );
                         return p.role.toLowerCase().includes(serviceQuery.toLowerCase()) ||
                                p.role.toLowerCase().includes(localizedQuery) ||
+                               p.profession.toLowerCase().includes(serviceQuery.toLowerCase()) ||
+                               matchesCategoryList ||
                                p.name.toLowerCase().includes(serviceQuery.toLowerCase());
                     })
                     : baseCards;
@@ -144,12 +236,16 @@ const SearchResults = () => {
 
         const matchesLanguage = selectedLanguages.length === 0 || (pro.languages && pro.languages.some((lang: string) => selectedLanguages.includes(lang)));
         
-        // Strict location filtering if locationQuery is provided
-        const matchesLocation = !locationQuery ||
-                                pro.searchLocation.includes(locationQuery.toLowerCase()) ||
-                                (pro.subcity && pro.subcity.toLowerCase().includes(locationQuery.toLowerCase())) ||
-                                locationQuery.toLowerCase().includes(pro.city?.toLowerCase() || "") ||
-                                (pro.city && locationQuery.toLowerCase().includes(pro.city.toLowerCase()));
+        // Strict location filtering if locationQuery is provided, else fallback to proximity if lat/lng are active
+        let matchesLocation = true;
+        if (locationQuery) {
+            const queryNorm = cleanForMatching(locationQuery);
+            const proLocationNorm = cleanForMatching(pro.searchLocation);
+            matchesLocation = proLocationNorm.includes(queryNorm) ||
+                              (pro.subcity && queryNorm.includes(cleanForMatching(pro.subcity)));
+        } else if (latQuery && lngQuery && pro.distance !== null) {
+            matchesLocation = pro.distance <= 20; // 20km maximum radius fallback
+        }
 
         return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesLanguage && matchesLocation;
     }).sort((a: any, b: any) => {
@@ -161,11 +257,16 @@ const SearchResults = () => {
             const expOrder: Record<string, number> = { "Senior": 3, "Mid-level": 2, "Junior": 1 };
             return (expOrder[b.experience] || 0) - (expOrder[a.experience] || 0);
         }
-        if (sortBy === "nearby" && locationQuery) {
-            const aMatch = a.searchLocation.includes(locationQuery.toLowerCase());
-            const bMatch = b.searchLocation.includes(locationQuery.toLowerCase());
-            if (aMatch && !bMatch) return -1;
-            if (!aMatch && bMatch) return 1;
+        if (sortBy === "nearby") {
+            if (a.distance !== null && b.distance !== null) {
+                return a.distance - b.distance;
+            }
+            if (locationQuery) {
+                const aMatch = a.searchLocation.includes(locationQuery.toLowerCase());
+                const bMatch = b.searchLocation.includes(locationQuery.toLowerCase());
+                if (aMatch && !bMatch) return -1;
+                if (!aMatch && bMatch) return 1;
+            }
         }
         return 0;
     });
@@ -185,6 +286,7 @@ const SearchResults = () => {
 
     const sortOptions = [
         { value: "recommended", label: t('common.recommended'), icon: Search },
+        { value: "nearby", label: t('common.nearby', { defaultValue: 'Nearby' }), icon: MapPin },
         { value: "rating", label: t('common.top_rated'), icon: Star },
         { value: "reviews", label: t('common.most_jobs'), icon: Briefcase },
         { value: "experience", label: t('common.expertise_depth'), icon: ArrowUpDown },
