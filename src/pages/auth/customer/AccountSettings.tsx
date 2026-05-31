@@ -6,9 +6,11 @@ import CustomerFooter from "./components/CustomerFooter";
 import Sidebar from "../professional/components/Sidebar";
 import Header from "../professional/components/Header";
 import { getImageUrl, changePassword, deleteUserProfile, getUserDetails } from "../../../api/auth.api";
+import { getProfessionalDetails } from "../../../api/professional.api";
+import api from "../../../api/auth.api";
 import LocationInput from "../../../components/LocationInput";
 import type { LocationSelection } from "../../../types/location.types";
-import { formatLocationDisplay, mergeLocationIntoForm } from "../../../utils/location";
+import { formatLocationDisplay } from "../../../utils/location";
 import PhoneInput from "../../../components/PhoneInput";
 import { useTranslation } from "react-i18next";
 import { 
@@ -54,20 +56,26 @@ const AccountSettings = () => {
             if (user?.id) {
                 try {
                     const latest = await getUserDetails(user.id);
-                    // Only update localStorage + local form states — do NOT call updateUser()
-                    // because that triggers a PATCH back to the backend which can lose fields.
                     const synced = { ...user, ...latest };
                     localStorage.setItem("user", JSON.stringify(synced));
-                    
-                    // Update local form states
                     setFirstName(latest.first_name || latest.name?.split(' ')[0] || "");
                     setLastName(latest.last_name || latest.name?.split(' ')[1] || "");
                     setPhone(latest.phonenumber || latest.phone || (latest as any).phone_number || "");
                     const loc = latest.city ? `${latest.city}${latest.subcity ? ', ' + latest.subcity : ''}` : "";
                     setLocation(loc);
-                    setBasePrice(latest.hourly_rate || latest.base_price || 0);
                 } catch (err) {
                     console.error("AccountSettings: Failed to sync user details:", err);
+                }
+            }
+            // For professionals, load hourly_rate from the professional profile
+            if (user?.role === 'professional') {
+                try {
+                    const proDetail = await getProfessionalDetails();
+                    if (proDetail?.hourly_rate != null) {
+                        setBasePrice(proDetail.hourly_rate);
+                    }
+                } catch {
+                    // non-critical
                 }
             }
         };
@@ -78,6 +86,7 @@ const AccountSettings = () => {
         e.preventDefault();
         setIsSaving(true);
         try {
+            // Update base user fields
             await updateUser({
                 first_name: firstName,
                 last_name: lastName,
@@ -88,8 +97,21 @@ const AccountSettings = () => {
                 subcity: locationData?.subcity || location.split(',')[1]?.trim() || "",
                 ...(locationData?.lat != null && { lat: locationData.lat }),
                 ...(locationData?.lng != null && { lng: locationData.lng }),
-                hourly_rate: Number(basePrice)
             });
+
+            // For professionals: send hourly_rate + location to the professional-detail endpoint
+            if (isPro && basePrice) {
+                const fd = new FormData();
+                fd.append("hourly_rate", String(Number(basePrice)));
+                if (locationData?.city) fd.append("city", locationData.city);
+                if (locationData?.subcity) fd.append("subcity", locationData.subcity);
+                if (locationData?.lat != null) fd.append("latitude", String(locationData.lat));
+                if (locationData?.lng != null) fd.append("longitude", String(locationData.lng));
+                await api.patch("/users/professional-detail/", fd, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+            }
+
             setUpdateSuccess(true);
             setTimeout(() => setUpdateSuccess(false), 3000);
         } catch (error) {

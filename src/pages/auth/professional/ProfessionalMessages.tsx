@@ -6,7 +6,8 @@ import Header from './components/Header';
 import { useAuth } from '../../../context/AuthContext';
 import { updateJobStatus } from '../../../api/jobs.api';
 import { getImageUrl, getUserDetails } from '../../../api/auth.api';
-import { sendMessage, getOrCreateConversation, getConversationById } from '../../../api/conversations.api';
+import { sendMessage, sendAttachment, sendJobCard, getOrCreateConversation, getConversationById } from '../../../api/conversations.api';
+import type { Message } from '../../../api/conversations.api';
 import { useConversationMessageSync } from '../../../hooks/useConversationMessageSync';
 import { useData } from '../../../context/DataContext';
 import { 
@@ -32,7 +33,9 @@ import {
     CheckCheck,
     Flag,
     AlertTriangle,
-    Loader2
+    Loader2,
+    Briefcase,
+    FileText
 } from 'lucide-react';
 import DisputeModal from '../../../components/DisputeModal';
 
@@ -240,6 +243,39 @@ const ProfessionalMessages = () => {
 
     const handleSelectRequest = (id: string) => {
         setSearchParams({ requestId: id });
+    };
+
+    // Attachment & job-share
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [showJobPicker, setShowJobPicker] = useState(false);
+
+    const handleAttachFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !conversationId) return;
+        e.target.value = "";
+        try {
+            setIsSending(true);
+            const newMsg = await sendAttachment(conversationId, file);
+            setMessages((prev: Message[]) => [...prev, newMsg]);
+        } catch {
+            alert(t('common.failed_send_message'));
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    const handleShareJob = async (jobId: string) => {
+        if (!conversationId) return;
+        setShowJobPicker(false);
+        try {
+            setIsSending(true);
+            const newMsg = await sendJobCard(conversationId, jobId);
+            setMessages((prev: Message[]) => [...prev, newMsg]);
+        } catch {
+            alert(t('common.failed_send_message'));
+        } finally {
+            setIsSending(false);
+        }
     };
 
     const handleAccept = async () => {
@@ -670,6 +706,7 @@ const ProfessionalMessages = () => {
                                             const userId = (user as any)?.user?.id || user?.id;
                                             const proId = (user as any)?.id;
                                             const isMe = msg.sender === userId || msg.sender === proId || msg.is_me;
+                                            const type = msg.message_type || "text";
                                             return (
                                                 <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-4'} animate-in fade-in zoom-in slide-in-from-bottom-6 duration-500`}>
                                                     {!isMe && (
@@ -681,18 +718,75 @@ const ProfessionalMessages = () => {
                                                             )}
                                                         </div>
                                                     )}
-                                                    <div className={`relative max-w-[80%] md:max-w-[70%] px-6 py-4 transition-all group/msg shadow-xl ${
+                                                    <div className={`relative max-w-[80%] md:max-w-[70%] transition-all group/msg shadow-xl ${
                                                         isMe 
                                                         ? 'bg-gradient-to-br from-primary via-primary-light to-primary-dark text-white rounded-[1.5rem] rounded-tr-none shadow-primary/20 border border-white/10' 
                                                         : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700/50 rounded-[1.5rem] rounded-tl-none'
-                                                    }`}>
-                                                        <div className="pb-6 text-pretty relative z-10 whitespace-pre-wrap">
-                                                            <p className="text-[14px] font-bold leading-relaxed">{msg.body || msg.text || msg.content}</p>
-                                                        </div>
-                                                        <div className={`absolute inset-x-6 bottom-3 flex items-center justify-between text-[9px] font-black tracking-widest uppercase select-none relative z-10 gap-6 ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
-                                                            <span>{formatTime(msg)}</span>
-                                                            {isMe && (msg.is_read || msg.isRead ? <CheckCheck size={12} className="text-white/70" /> : <Check size={12} className="text-white/70" />)}
-                                                        </div>
+                                                    } ${type === 'job_card' ? '!bg-transparent !shadow-none !border-none !p-0' : 'px-6 py-4'}`}>
+
+                                                        {/* IMAGE */}
+                                                        {type === 'image' && (msg.attachment_url || msg.attachment) && (
+                                                            <div className="overflow-hidden rounded-xl">
+                                                                <a href={msg.attachment_url || msg.attachment || ''} target="_blank" rel="noopener noreferrer">
+                                                                    <img
+                                                                        src={msg.attachment_url || msg.attachment || ''}
+                                                                        alt="image"
+                                                                        className="max-w-[240px] max-h-[240px] object-cover rounded-xl hover:opacity-90 transition-opacity"
+                                                                    />
+                                                                </a>
+                                                                {msg.body && <p className="text-[13px] font-medium mt-2 px-1 pb-1">{msg.body}</p>}
+                                                            </div>
+                                                        )}
+
+                                                        {/* FILE */}
+                                                        {type === 'file' && (
+                                                            <a
+                                                                href={msg.attachment_url || msg.attachment || '#'}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="flex items-center gap-3"
+                                                            >
+                                                                <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${isMe ? 'bg-white/20' : 'bg-primary/10'}`}>
+                                                                    <FileText size={20} className={isMe ? 'text-white' : 'text-primary'} />
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <p className="text-[13px] font-black truncate max-w-[160px]">{msg.attachment_name || 'File'}</p>
+                                                                    <p className={`text-[9px] font-bold uppercase tracking-widest ${isMe ? 'text-white/60' : 'text-slate-400'}`}>Tap to open</p>
+                                                                </div>
+                                                            </a>
+                                                        )}
+
+                                                        {/* JOB CARD */}
+                                                        {type === 'job_card' && msg.shared_job_detail && (
+                                                            <div className={`rounded-[1.5rem] border overflow-hidden w-72 ${isMe ? 'border-primary/30 bg-primary/5' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}>
+                                                                <div className="px-5 py-3 border-b border-inherit flex items-center gap-2">
+                                                                    <Briefcase size={14} className="text-primary shrink-0" />
+                                                                    <span className="text-[9px] font-black uppercase tracking-widest text-primary">Job Shared</span>
+                                                                </div>
+                                                                <div className="px-5 py-4 space-y-1.5">
+                                                                    <p className="text-[14px] font-black text-slate-900 dark:text-white truncate">{msg.shared_job_detail.title}</p>
+                                                                    <p className="text-[12px] text-slate-500 dark:text-slate-400 line-clamp-2">{msg.shared_job_detail.description}</p>
+                                                                    {msg.shared_job_detail.budget && (
+                                                                        <p className="text-[12px] font-black text-emerald-600">ETB {msg.shared_job_detail.budget}</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* TEXT */}
+                                                        {(type === 'text' || (!type && (msg.body || msg.text))) && (
+                                                            <div className="pb-6 text-pretty relative z-10 whitespace-pre-wrap">
+                                                                <p className="text-[14px] font-bold leading-relaxed">{msg.body || msg.text || msg.content}</p>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Timestamp */}
+                                                        {type !== 'job_card' && (
+                                                            <div className={`absolute inset-x-6 bottom-3 flex items-center justify-between text-[9px] font-black tracking-widest uppercase select-none relative z-10 gap-6 ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
+                                                                <span>{formatTime(msg.sent_at || msg.created_at || msg)}</span>
+                                                                {isMe && (msg.is_read || (msg as any).isRead ? <CheckCheck size={12} className="text-white/70" /> : <Check size={12} className="text-white/70" />)}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             );
@@ -702,31 +796,76 @@ const ProfessionalMessages = () => {
                                 </div>
 
                                 {/* Messaging Input */}
-                                <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800/50">
-                                    <div className="flex items-center gap-3 max-w-5xl mx-auto">
-                                        <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-800 rounded-full px-5 py-1.5 ring-1 ring-slate-200/50 dark:ring-slate-700/50 focus-within:ring-primary/50 transition-all">
-                                            <input
-                                                className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none py-2.5"
-                                                placeholder={t('common.type_message')}
-                                                type="text"
-                                                value={messageInput}
-                                                onChange={(e) => setMessageInput(e.target.value)}
-                                                disabled={isSending}
-                                            />
-                                        </div>
-                                        <button
-                                            type="submit"
-                                            className="size-12 flex items-center justify-center bg-primary text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-md shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 group"
-                                            disabled={!messageInput.trim() || isSending || !conversationId}
-                                        >
-                                            {isSending ? (
-                                                <Loader2 size={20} className="animate-spin" />
+                                <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800/50">
+                                    {/* Job picker popover */}
+                                    {showJobPicker && (
+                                        <div className="mb-3 max-h-48 overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl">
+                                            {professionalRequests.length === 0 ? (
+                                                <p className="p-4 text-xs text-slate-400 font-bold text-center">No jobs to share</p>
                                             ) : (
-                                                <Send size={20} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                                professionalRequests.map((job: any) => (
+                                                    <button
+                                                        key={job.id}
+                                                        onClick={() => handleShareJob(job.id)}
+                                                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left border-b border-slate-100 dark:border-slate-700 last:border-0"
+                                                    >
+                                                        <Briefcase size={16} className="text-primary shrink-0" />
+                                                        <div className="min-w-0">
+                                                            <p className="text-[12px] font-black text-slate-800 dark:text-white truncate">{job.title || job.description?.slice(0, 40)}</p>
+                                                            <p className="text-[10px] text-slate-400 uppercase tracking-widest">{job.status}</p>
+                                                        </div>
+                                                    </button>
+                                                ))
                                             )}
-                                        </button>
-                                    </div>
-                                </form>
+                                        </div>
+                                    )}
+                                    <form onSubmit={handleSendMessage}>
+                                        <div className="flex items-center gap-3 max-w-5xl mx-auto">
+                                            {/* Attach file */}
+                                            <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachFile} accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" />
+                                            <button
+                                                type="button"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                disabled={isSending || !conversationId}
+                                                className="size-11 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-primary/10 hover:text-primary transition-all disabled:opacity-40 shrink-0"
+                                                title="Attach image or file"
+                                            >
+                                                <Paperclip size={18} />
+                                            </button>
+                                            {/* Share job */}
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowJobPicker(p => !p)}
+                                                disabled={isSending || !conversationId}
+                                                className={`size-11 flex items-center justify-center rounded-full transition-all disabled:opacity-40 shrink-0 ${showJobPicker ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-primary/10 hover:text-primary'}`}
+                                                title="Share a job"
+                                            >
+                                                <Briefcase size={18} />
+                                            </button>
+                                            <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-800 rounded-full px-5 py-1.5 ring-1 ring-slate-200/50 dark:ring-slate-700/50 focus-within:ring-primary/50 transition-all">
+                                                <input
+                                                    className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none py-2.5"
+                                                    placeholder={t('common.type_message')}
+                                                    type="text"
+                                                    value={messageInput}
+                                                    onChange={(e) => setMessageInput(e.target.value)}
+                                                    disabled={isSending}
+                                                />
+                                            </div>
+                                            <button
+                                                type="submit"
+                                                className="size-12 flex items-center justify-center bg-primary text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-md shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 group"
+                                                disabled={!messageInput.trim() || isSending || !conversationId}
+                                            >
+                                                {isSending ? (
+                                                    <Loader2 size={20} className="animate-spin" />
+                                                ) : (
+                                                    <Send size={20} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                                )}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
                             </>
                         )}
                     </div>
