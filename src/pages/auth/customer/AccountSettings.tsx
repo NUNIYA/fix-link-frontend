@@ -166,7 +166,10 @@ const AccountSettings = () => {
         if (!user) return;
         setIsDeleting(true);
         try {
-            await deleteUserProfile(user.id);
+            // Resolve the correct UUID — for professionals the stored user object
+            // may have the actual UUID nested under user.user.id
+            const userId = (user as any).user?.id || user.id;
+            await deleteUserProfile(userId);
             logout();
             navigate("/");
         } catch (error: any) {
