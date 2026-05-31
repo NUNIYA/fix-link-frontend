@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = 'https://fix-link-5332f899c079.herokuapp.com/api';
+// const API_BASE = 'https://fix-link-5332f899c079.herokuapp.com/api';
 
 async function runTest() {
     try {

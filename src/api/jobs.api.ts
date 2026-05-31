@@ -113,15 +113,28 @@ export const getServiceCategories = async () => {
 
 /**
  * Get list of all users/professionals
- * Note: Use /users/ instead of /users/professional-detail/ because the latter
- * is restricted to professionals viewing their own profile.
+ * Supports optional filtering by lat/lng, language, and skill.
  */
-export const getProfessionals = async (params?: { lat?: number; lng?: number }) => {
-    let endpoint = "/users/";
+export const getProfessionals = async (params?: {
+    lat?: number;
+    lng?: number;
+    language?: string;
+    skill?: string;
+    category?: string;
+    search?: string;
+}) => {
+    const query = new URLSearchParams();
     if (params?.lat !== undefined && params?.lng !== undefined) {
-        endpoint = `/users/?lat=${params.lat}&lng=${params.lng}`;
+        query.set("lat", String(params.lat));
+        query.set("lng", String(params.lng));
     }
-    const response = await api.get(endpoint);
+    if (params?.language) query.set("language", params.language);
+    if (params?.skill) query.set("skill", params.skill);
+    if (params?.category) query.set("category", params.category);
+    if (params?.search) query.set("search", params.search);
+
+    const qs = query.toString();
+    const response = await api.get(qs ? `/users/?${qs}` : "/users/");
     return response.data;
 };
 

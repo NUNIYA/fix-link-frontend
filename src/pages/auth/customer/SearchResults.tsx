@@ -39,11 +39,14 @@ const SearchResults = () => {
         const fetchAndEnrich = async () => {
             try {
                 const [userData, categoriesData] = await Promise.all([
-                    getProfessionals(
-                        latQuery && lngQuery
-                        ? { lat: Number(latQuery), lng: Number(lngQuery) }
-                        : undefined
-                    ),
+                    getProfessionals({
+                        ...(latQuery && lngQuery
+                            ? { lat: Number(latQuery), lng: Number(lngQuery) }
+                            : {}),
+                        category: "professional",
+                        // Pass active language/skill filters to the backend for server-side filtering
+                        ...(selectedLanguages.length === 1 ? { language: selectedLanguages[0] } : {}),
+                    }),
                     getServiceCategories()
                 ]);
 
@@ -125,7 +128,7 @@ const SearchResults = () => {
         };
 
         fetchAndEnrich();
-    }, [serviceQuery, location.search]);
+    }, [serviceQuery, location.search, selectedLanguages]);
 
     // Force loading state if the URL search has changed but the data hasn't re-fetched yet
     const isSearching = loading || lastLoadedSearch !== location.search;

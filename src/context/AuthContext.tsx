@@ -144,7 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             if (user.role === "professional" && !(userData instanceof FormData)) {
                 // Split fields
-                const proFields = ["city", "subcity", "house_number", "location", "gender", "skills", "preferred_payout_method", "payout_account_number", "availability", "service_categories", "lat", "lng"];
+                const proFields = ["city", "subcity", "house_number", "location", "latitude", "longitude", "gender", "skills", "preferred_payout_method", "payout_account_number", "availability", "service_categories", "lat", "lng"];
                 const proData: Record<string, any> = {};
                 const userDataToUpdate: Partial<User> = {};
                 
@@ -155,6 +155,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         (userDataToUpdate as any)[key] = (userData as any)[key];
                     }
                 });
+
+                // Also sync location to the User model so customers and professionals share the same field
+                if (proData.city !== undefined) (userDataToUpdate as any).city = proData.city;
+                if (proData.subcity !== undefined) (userDataToUpdate as any).subcity = proData.subcity;
+                if (proData.lat !== undefined) (userDataToUpdate as any).latitude = proData.lat;
+                if (proData.lng !== undefined) (userDataToUpdate as any).longitude = proData.lng;
+                if (proData.latitude !== undefined) (userDataToUpdate as any).latitude = proData.latitude;
+                if (proData.longitude !== undefined) (userDataToUpdate as any).longitude = proData.longitude;
 
                 if ((userData as any).available_days !== undefined) {
                     proData.availability = JSON.stringify((userData as any).available_days);
