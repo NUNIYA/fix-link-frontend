@@ -46,7 +46,7 @@ const ProfessionalEarnings: React.FC = () => {
 
     // Use backend values if available, fallback to frontend calculations
     const totalEarned =
-        Number(earningsSummary?.gross_earned ?? NaN) ||
+        Number(earningsSummary?.net_earned ?? NaN) ||
         myCompletedJobs.reduce((sum: number, j: any) => sum + Number(j.price || j.budget || 0), 0);
     const pendingAmount =
         Number(earningsSummary?.pending_withdrawal_total ?? NaN) ||

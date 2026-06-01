@@ -756,7 +756,18 @@ const ProfessionalMessages = () => {
                                                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700/50 rounded-[1.5rem] rounded-tl-none'
                                                      }`}>
                                                          <div className="pb-6 text-pretty relative z-10 whitespace-pre-wrap">
-                                                             <p className="text-[14px] font-bold leading-relaxed">{msg.body || msg.text || msg.content}</p>
+                                                             {(msg.body || msg.text || msg.content) && (
+                                                                 <p className="text-[14px] font-bold leading-relaxed">{msg.body || msg.text || msg.content}</p>
+                                                             )}
+                                                             {((msg as any).attachment_url || (msg as any).attachment) && (
+                                                                 <a href={((msg as any).attachment_url || (msg as any).attachment)} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                                                                     <img
+                                                                         src={((msg as any).attachment_url || (msg as any).attachment)}
+                                                                         alt="attachment"
+                                                                         className="max-w-[220px] max-h-[220px] rounded-xl object-cover border border-white/20 shadow-md hover:opacity-90 transition-opacity"
+                                                                     />
+                                                                 </a>
+                                                             )}
                                                          </div>
                                                          <div className={`absolute inset-x-6 bottom-3 flex items-center justify-between text-[9px] font-black tracking-widest uppercase select-none relative z-10 gap-6 ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
                                                              <span>{formatTime(msg)}</span>

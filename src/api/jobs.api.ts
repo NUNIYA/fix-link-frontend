@@ -20,9 +20,7 @@ export const createJob = async (jobData: any) => {
 
             // Append multiple photos
             jobData.photos.forEach((photo: File, index: number) => {
-                fd.append(`image_${index}`, photo); // Or just 'images' depending on backend
-                // If backend expects 'images' field multiple times:
-                fd.append("images", photo);
+                fd.append("uploaded_images", photo);
             });
 
             const token = localStorage.getItem("access_token");

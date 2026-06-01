@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FcGoogle } from "react-icons/fc";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
-import { GoogleLogin } from "@react-oauth/google";
-import { loginUser, googleLogin } from "../../../api/auth.api";
+import { loginUser } from "../../../api/auth.api";
 import { useAuth } from "../../../context/AuthContext";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 import ErrorMessage from "../../../components/ErrorMessage";
@@ -67,54 +65,7 @@ const LoginPage: React.FC = () => {
         <div className="glass-panel p-8 rounded-3xl shadow-xl border border-white/40">
           <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-6">Log in</h2>
 
-          {/* Social Login */}
-          <div className="flex justify-center w-full">
-            <div className="w-full">
-              <GoogleLogin
-                onSuccess={async (credentialResponse) => {
-                  if (credentialResponse.credential) {
-                    setLoading(true);
-                    setError(null);
-                    try {
-                      const res = await googleLogin(credentialResponse.credential);
-                      login(res.access, res.refresh, res.user);
-                      
-                      if (res.is_new) {
-                        navigate("/signup/onboarding");
-                      } else {
-                        if (res.user.role === "professional") {
-                          navigate("/professional/home");
-                        } else {
-                          navigate("/customer/home");
-                        }
-                      }
-                    } catch (err: any) {
-                      setError(err.message || "Google login failed");
-                    } finally {
-                      setLoading(false);
-                    }
-                  }
-                }}
-                onError={() => {
-                  setError("Google Login Failed");
-                }}
-                useOneTap
-                theme="outline"
-                shape="pill"
-                width="100%"
-              />
-            </div>
-          </div>
 
-          {/* Divider */}
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border-light dark:border-border-dark opacity-50"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-transparent px-2 text-subtext-light dark:text-subtext-dark font-bold tracking-widest">or email</span>
-            </div>
-          </div>
 
           {/* Error Message */}
           {error && (

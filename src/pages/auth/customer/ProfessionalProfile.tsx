@@ -482,17 +482,18 @@ const ProfessionalProfile = () => {
       try {
         const rawJobs = await listJobs();
         const allJobs = Array.isArray(rawJobs) ? rawJobs : [];
-        const acceptedStatuses = ["accepted", "assigned", "done", "completed"];
+        const acceptedStatuses = ["accepted", "assigned", "booked", "in_progress", "done", "completed"];
 
         // 1. Check relationship with current user (if customer)
         if (!isProView && user) {
           const jobBetweenUs = allJobs.find((j: any) => {
             const customerId =
               typeof j.customer === "object" ? j.customer?.id : j.customer;
+            // Backend uses 'assigned_to' not 'professional'
             const professionalId =
-              typeof j.professional === "object"
-                ? j.professional?.id
-                : j.professional;
+              typeof j.assigned_to === "object"
+                ? j.assigned_to?.id
+                : j.assigned_to;
             return (
               String(customerId) === String(user.id) &&
               String(professionalId) === String(targetId) &&
@@ -1248,7 +1249,17 @@ const ProfessionalProfile = () => {
                             <span className="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors">call</span>
                             <div className="flex-1">
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Signal Number</p>
-                              <p className="text-slate-900 dark:text-white font-black">{profilePhone || (isProView ? "Update in Settings" : "Classified")}</p>
+                              <p className="text-slate-900 dark:text-white font-black">
+                                {isProView
+                                  ? (profilePhone || "Update in Settings")
+                                  : hasAcceptedJob
+                                    ? (profilePhone || "Not provided")
+                                    : <span className="flex items-center gap-2 text-slate-400 dark:text-slate-500 font-bold text-sm italic">
+                                        <span className="material-symbols-outlined text-base">lock</span>
+                                        Unlock after booking
+                                      </span>
+                                }
+                              </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-5 p-5 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-700/50 group hover:border-emerald-500/30 transition-all">

@@ -784,10 +784,10 @@ const CustomerMessages = () => {
                                                          {(msg.body || msg.text || msg.content) && (
                                                              <p className="text-[12.5px] font-medium leading-[1.5] break-words">{msg.body || msg.text || msg.content}</p>
                                                          )}
-                                                         {(msg as any).attachment_url && (
-                                                             <a href={(msg as any).attachment_url} target="_blank" rel="noopener noreferrer" className="block mt-1.5">
+                                                        {((msg as any).attachment_url || (msg as any).attachment) && (
+                                                             <a href={((msg as any).attachment_url || (msg as any).attachment)} target="_blank" rel="noopener noreferrer" className="block mt-1.5">
                                                                  <img
-                                                                     src={(msg as any).attachment_url}
+                                                                     src={((msg as any).attachment_url || (msg as any).attachment)}
                                                                      alt="attachment"
                                                                      className="max-w-[220px] max-h-[220px] rounded-xl object-cover border border-white/20 shadow-md hover:opacity-90 transition-opacity"
                                                                  />

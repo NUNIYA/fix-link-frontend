@@ -35,7 +35,7 @@ const AccountSettings = () => {
     const [locationData, setLocationData] = useState<LocationSelection | null>(null);
     const [profilePreview, setProfilePreview] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
-    const [basePrice, setBasePrice] = useState(user?.hourly_rate || user?.base_price || 0);
+    const [basePrice, setBasePrice] = useState<number | string>(user?.hourly_rate || user?.base_price || 0);
     const isPro = user?.role === 'professional';
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -338,7 +338,7 @@ const AccountSettings = () => {
                                                         <input
                                                             type="number"
                                                             value={basePrice}
-                                                            onChange={(e) => setBasePrice(Number(e.target.value))}
+                                                            onChange={(e) => setBasePrice(e.target.value)}
                                                             placeholder="e.g. 500"
                                                             className="w-full px-6 py-4 pl-16 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-all font-bold text-slate-800 dark:text-white outline-none"
                                                         />

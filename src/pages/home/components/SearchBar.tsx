@@ -13,13 +13,7 @@ const SearchBar: React.FC = () => {
   const [locationLng, setLocationLng] = useState<number | null>(null);
 
   const handleSearch = () => {
-    const params = new URLSearchParams();
-    if (service) params.append("service", service);
-    if (locationSubcity) params.append("location", locationSubcity);
-    else if (location) params.append("location", location);
-    if (locationLat !== null && locationLat !== undefined) params.append("lat", String(locationLat));
-    if (locationLng !== null && locationLng !== undefined) params.append("lng", String(locationLng));
-    navigate(`/customer/search?${params.toString()}`);
+    navigate("/signup/email");
   };
 
   return (

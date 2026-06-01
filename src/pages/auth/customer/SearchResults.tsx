@@ -306,7 +306,7 @@ const SearchResults = () => {
     }
 
     return (
-        <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark font-display overflow-x-hidden">
+        <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark font-display">
             {/* Background Blobs */}
             <div className="fixed top-[-10%] right-[-5%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
             <div className="fixed bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-accent-cyan/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
@@ -391,8 +391,8 @@ const SearchResults = () => {
                 <div className="flex flex-col lg:flex-row gap-8 transition-all duration-500">
                     {/* Conditional Sidebar */}
                     {showFilters && (
-                        <aside className="w-full lg:w-1/4 xl:w-1/5 flex-shrink-0 animate-in slide-in-from-left-5 fade-in duration-300 relative z-10">
-                            <div className="bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 sticky top-8">
+                        <aside className="w-full lg:w-1/4 xl:w-1/5 flex-shrink-0 animate-in slide-in-from-left-5 fade-in duration-300 relative z-10 sticky top-28 self-start">
+                            <div className="bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8">
                                 <FiltersSidebar
                                     priceMin={priceMin}
                                     setPriceMin={setPriceMin}
