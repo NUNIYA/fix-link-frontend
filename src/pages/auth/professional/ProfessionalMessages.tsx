@@ -30,9 +30,9 @@ import {
     Paperclip, 
     Send,
     CheckCheck,
-    Flag,
     AlertTriangle,
-    Loader2
+    Loader2,
+    ImageIcon
 } from 'lucide-react';
 import DisputeModal from '../../../components/DisputeModal';
 
@@ -64,8 +64,11 @@ const ProfessionalMessages = () => {
     const [showCustomerProfile, setShowCustomerProfile] = useState(false);
     const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
+    const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+    const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
     const moreMenuRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const attachmentInputRef = useRef<HTMLInputElement>(null);
     const { jobs, notifications, jobsLoading, notificationsLoading, refreshJobs } = useData();
 
     // Prevent blocking UI flash during background context polling
@@ -230,23 +233,43 @@ const ProfessionalMessages = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setAttachmentFile(file);
+            setAttachmentPreview(URL.createObjectURL(file));
+        }
+    };
+
+    const clearAttachment = () => {
+        if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+        setAttachmentFile(null);
+        setAttachmentPreview(null);
+    };
+
     const handleSendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         const text = messageInput.trim();
-        if (!text || !conversationId || isSending) return;
+        const hasAttachment = !!attachmentFile;
+        if (!text && !hasAttachment) return;
+        if (!conversationId || isSending) return;
 
         setIsSending(true);
         setMessageInput("");
+        const fileToSend = attachmentFile;
+        const previewUrl = attachmentPreview;
+        clearAttachment();
 
         // Optimistically append the message immediately so it always shows on
         // the right side, even if the backend 500s after saving it.
         const optimisticId = `optimistic-${Date.now()}`;
-        const optimisticMsg = {
+        const optimisticMsg: any = {
             id: optimisticId,
             sender: 'pro', // role string the backend would return
             body: text,
             text,
             content: text,
+            attachment_url: previewUrl || undefined,
             created_at: new Date().toISOString(),
             sent_at: new Date().toISOString(),
             is_read: false,
@@ -255,12 +278,13 @@ const ProfessionalMessages = () => {
         setMessages(prev => [...prev, optimisticMsg]);
 
         try {
-            const newMsg = await sendMessage(conversationId, text);
+            const newMsg = await sendMessage(conversationId, text, fileToSend);
             // Replace the optimistic message with the real server response
             const msgWithTs = {
                 ...newMsg,
                 sender: newMsg?.sender || 'pro',
                 created_at: newMsg?.created_at || newMsg?.sent_at || newMsg?.timestamp || new Date().toISOString(),
+                attachment_url: newMsg?.attachment_url || newMsg?.attachment || previewUrl || undefined,
             };
             setMessages(prev => prev.map(m => m.id === optimisticId ? msgWithTs : m));
         } catch (error: any) {
@@ -793,7 +817,49 @@ const ProfessionalMessages = () => {
 
                                 {/* Messaging Input */}
                                 <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800/50">
-                                    <div className="flex items-center gap-3 max-w-5xl mx-auto">
+                                    {/* Attachment preview strip */}
+                                    {attachmentPreview && (
+                                        <div className="flex items-center gap-3 max-w-5xl mx-auto mb-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                            <div className="relative">
+                                                <img
+                                                    src={attachmentPreview}
+                                                    alt="preview"
+                                                    className="h-20 w-20 rounded-2xl object-cover border-2 border-primary/30 shadow-lg"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={clearAttachment}
+                                                    className="absolute -top-2 -right-2 size-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600 transition-colors"
+                                                >
+                                                    <X size={11} strokeWidth={3} />
+                                                </button>
+                                            </div>
+                                            <span className="text-xs font-bold text-slate-400 truncate max-w-[180px]">{attachmentFile?.name}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-2 max-w-5xl mx-auto">
+                                        {/* Hidden file input */}
+                                        <input
+                                            ref={attachmentInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleAttachmentChange}
+                                        />
+                                        {/* Attach button */}
+                                        <button
+                                            type="button"
+                                            onClick={() => attachmentInputRef.current?.click()}
+                                            className={`size-10 flex items-center justify-center rounded-full transition-all shrink-0 ${
+                                                attachmentFile
+                                                    ? 'bg-primary/15 text-primary ring-2 ring-primary/30'
+                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-primary hover:bg-primary/10'
+                                            }`}
+                                            title="Attach image"
+                                            disabled={isSending}
+                                        >
+                                            <ImageIcon size={18} />
+                                        </button>
                                         <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-800 rounded-full px-5 py-1.5 ring-1 ring-slate-200/50 dark:ring-slate-700/50 focus-within:ring-primary/50 transition-all">
                                             <input
                                                 className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none py-2.5"
@@ -807,7 +873,7 @@ const ProfessionalMessages = () => {
                                         <button
                                             type="submit"
                                             className="size-12 flex items-center justify-center bg-primary text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-md shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 group"
-                                            disabled={!messageInput.trim() || isSending || !conversationId}
+                                            disabled={(!messageInput.trim() && !attachmentFile) || isSending || !conversationId}
                                         >
                                             {isSending ? (
                                                 <Loader2 size={20} className="animate-spin" />
@@ -990,15 +1056,15 @@ const ProfessionalMessages = () => {
                         {/* Modal Header/Hero */}
                         <div className="p-10 pb-0 flex flex-col items-center text-center">
                             <div className="size-24 rounded-3xl bg-primary/10 flex items-center justify-center mb-6 border border-primary/20 shadow-inner">
-                                {activeUserDetails?.profile_picture || activeRequest.customer_detail?.profile_picture ? (
-                                    <img src={getImageUrl(activeUserDetails?.profile_picture || activeRequest.customer_detail.profile_picture)} alt="" className="size-full object-cover rounded-3xl" />
+                                {activeUserDetails?.profile_picture || activeRequest?.customer_detail?.profile_picture ? (
+                                    <img src={getImageUrl(activeUserDetails?.profile_picture || activeRequest?.customer_detail?.profile_picture)} alt="" className="size-full object-cover rounded-3xl" />
                                 ) : (
                                     <User size={48} className="text-primary" />
                                 )}
                             </div>
                             <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2">
                                 {(() => {
-                                    const detail = activeUserDetails || activeRequest.customer_detail;
+                                    const detail = activeUserDetails || activeRequest?.customer_detail;
                                     if (!detail) return t('common.valued_client');
                                     const first = detail.first_name || detail.user?.first_name || detail.user_detail?.first_name;
                                     const last = detail.last_name || detail.user?.last_name || detail.user_detail?.last_name || "";
@@ -1018,25 +1084,25 @@ const ProfessionalMessages = () => {
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.communication')}</p>
                                     <div className="space-y-1">
                                         <p className="text-sm font-black text-slate-800 dark:text-white">
-                                            {(activeUserDetails || activeRequest.customer_detail)?.phonenumber || (activeUserDetails || activeRequest.customer_detail)?.phone || t('common.private_information')}
+                                            {(activeUserDetails || activeRequest?.customer_detail)?.phonenumber || (activeUserDetails || activeRequest?.customer_detail)?.phone || t('common.private_information')}
                                         </p>
-                                        <p className="text-xs font-bold text-slate-400">{(activeUserDetails || activeRequest.customer_detail)?.email || t('common.email_pending')}</p>
+                                        <p className="text-xs font-bold text-slate-400">{(activeUserDetails || activeRequest?.customer_detail)?.email || t('common.email_pending')}</p>
                                     </div>
                                 </div>
                                 <div className="space-y-1.5">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.project_location')}</p>
-                                    <p className="text-sm font-black text-slate-800 dark:text-white">{activeRequest.address || activeRequest.city || "Addis Ababa, ET"}</p>
+                                    <p className="text-sm font-black text-slate-800 dark:text-white">{activeRequest?.address || activeRequest?.city || "Addis Ababa, ET"}</p>
                                 </div>
                                 <div className="space-y-1.5">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.budget_estimate')}</p>
                                     <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-                                        {activeRequest.budget ? `${t('common.etb')} ${activeRequest.budget}` : t('common.to_be_negotiated')}
+                                        {activeRequest?.budget ? `${t('common.etb')} ${activeRequest.budget}` : t('common.to_be_negotiated')}
                                     </p>
                                 </div>
                                 <div className="space-y-1.5">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.target_date')}</p>
                                     <p className="text-sm font-black text-slate-800 dark:text-white">
-                                        {activeRequest.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { day: 'numeric', month: 'short' }) : t('common.not_scheduled_yet')}
+                                        {activeRequest?.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { day: 'numeric', month: 'short' }) : t('common.not_scheduled_yet')}
                                     </p>
                                 </div>
                             </div>

@@ -371,6 +371,19 @@ const ProfessionalJobs: React.FC = () => {
                                 <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-700/50">
                                     <h5 className="text-lg font-black text-slate-900 dark:text-white mb-3 tracking-tight">{selectedJob.title || t('common.job_details_hidden')}</h5>
                                     <p className="text-slate-600 dark:text-slate-400 font-bold leading-relaxed">{selectedJob.description || t('common.no_project_description')}</p>
+                                    
+                                    {selectedJob.images && selectedJob.images.length > 0 && (
+                                        <div className="flex gap-3 overflow-x-auto pt-4 mt-4 border-t border-slate-200 dark:border-slate-700/50 custom-scrollbar">
+                                            {selectedJob.images.map((img: any, idx: number) => {
+                                                const imgUrl = img.file_url || img.file || img.image_url || img.image;
+                                                return (
+                                                    <a key={idx} href={imgUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                                                        <img src={imgUrl} alt="Job reference" className="h-24 w-24 object-cover rounded-xl border border-slate-200 dark:border-slate-700 hover:opacity-80 transition-opacity" />
+                                                    </a>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

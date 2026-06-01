@@ -348,11 +348,14 @@ const ProfessionalJobBoard = () => {
                                         
                                         {selectedJob.images && selectedJob.images.length > 0 && (
                                             <div className="flex gap-3 overflow-x-auto pb-4 mb-4 custom-scrollbar">
-                                                {selectedJob.images.map((img: any, idx: number) => (
-                                                    <a key={idx} href={img.image || img.image_url} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                                                        <img src={img.image || img.image_url} alt="Job reference" className="h-24 w-24 object-cover rounded-xl border border-slate-200 dark:border-slate-700 hover:opacity-80 transition-opacity" />
-                                                    </a>
-                                                ))}
+                                                {selectedJob.images.map((img: any, idx: number) => {
+                                                    const imgUrl = img.file_url || img.file || img.image_url || img.image;
+                                                    return (
+                                                        <a key={idx} href={imgUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                                                            <img src={imgUrl} alt="Job reference" className="h-24 w-24 object-cover rounded-xl border border-slate-200 dark:border-slate-700 hover:opacity-80 transition-opacity" />
+                                                        </a>
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                         
