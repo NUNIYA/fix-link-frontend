@@ -7,6 +7,30 @@ import { getProfessionals, getServiceCategories } from "../../../api/jobs.api";
 import { getProfessionalProfile } from "../../../api/auth.api";
 import { Sparkles, Star, Briefcase, TrendingUp, ArrowUp, ArrowDown, Settings2, ArrowUpDown, ChevronDown, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import {
+  buildUpvoteByUserId,
+  getProfessionalUpvote,
+  isTrustedProfessional,
+  resolveTrustedUpvote,
+  resolveUserId,
+} from "../../../utils/trustedProfessional";
+
+// Normalize language strings so UI filter matches backend data reliably.
+const normalizeLanguage = (lang: string): string => {
+  const v = String(lang || "")
+    .toLowerCase()
+    .replace(/[\s\-_]+/g, " ")
+    .trim();
+  if (!v) return "";
+
+  // Common variants/synonyms observed in data.
+  if (["oromo", "oromiffa", "oromifa", "afaan oromo", "oromiffaa"].includes(v)) return "oromiffa";
+  if (["amharic", "amhara", "amharigna", "amharinya"].includes(v)) return "amharic";
+  if (["tigrinya", "tigrigna", "tigregna"].includes(v)) return "tigrinya";
+  if (["english", "en", "eng"].includes(v)) return "english";
+
+  return v;
+};
 
 const CustomerHome = () => {
   const { t } = useTranslation();
@@ -16,8 +40,9 @@ const CustomerHome = () => {
 
   // Fetch professionals and categories from backend
   useEffect(() => {
-    // 1. Try to load from cache for instant UI (v3 cache has real location data)
-    const cached = localStorage.getItem('cached_professionals_v3');
+    // 1. Try to load from cache for instant UI.
+    // v6 cache stores trusted state from User.upvote.
+    const cached = localStorage.getItem('cached_professionals_v7');
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
@@ -61,9 +86,33 @@ const CustomerHome = () => {
           (u: any) => u.role === 'professional' || u.is_professional || (u.user && u.user.role === 'professional')
         );
 
-        // Build base cards (location will be enriched below)
-        const baseCards = proList.map((prof: any) => {
+        // Capture upvote from GET /users/ before profile merge can drop it.
+        const upvoteByUserId = buildUpvoteByUserId(proList);
+
+        // Enrich with public profile for location/categories.
+        const enrichedProList = await Promise.all(
+          proList.map(async (prof: any) => {
+            try {
+              const profId = prof.id || prof.user?.id;
+              if (!profId) {
+                const upvote = resolveTrustedUpvote(prof, null, upvoteByUserId);
+                return { ...prof, sourceUpvote: upvote, upvote };
+              }
+              const detail = await getProfessionalProfile(String(profId));
+              const upvote = resolveTrustedUpvote(prof, detail, upvoteByUserId);
+              return { ...prof, ...detail, sourceUpvote: upvote, upvote };
+            } catch {
+              const upvote = resolveTrustedUpvote(prof, null, upvoteByUserId);
+              return { ...prof, sourceUpvote: upvote, upvote };
+            }
+          })
+        );
+
+        // Build base cards from enriched data
+        const baseCards = enrichedProList.map((prof: any) => {
           const ud = prof.user || {};
+          const userId = resolveUserId(prof);
+          const upvote = upvoteByUserId.get(userId) ?? getProfessionalUpvote(prof);
           const roleId = prof.profession || ud.profession;
           const yoe = Number(prof.years_of_experience || ud.years_of_experience || 0);
           const locationParts = [
@@ -83,7 +132,8 @@ const CustomerHome = () => {
             rating: prof.average_rating || prof.rating || 0,
             reviews: prof.total_jobs_completed || prof.reviews_count || 0,
             price: prof.hourly_rate || 0,
-            verified: prof.is_verified_professional || false,
+            upvote,
+            verified: upvote !== 0,
             image: getImageUrl(prof.profile_picture || ud.profile_picture),
             location,
             experience: yoe >= 5 ? 'Senior' : yoe >= 3 ? 'Mid-level' : 'Junior',
@@ -97,7 +147,7 @@ const CustomerHome = () => {
         });
 
         setProfessionals(baseCards);
-        localStorage.setItem('cached_professionals_v3', JSON.stringify(baseCards));
+        localStorage.setItem('cached_professionals_v7', JSON.stringify(baseCards));
         setLoading(false);
       } catch (err) {
         console.error("Failed to fetch dashboard data", err);
@@ -135,7 +185,7 @@ const CustomerHome = () => {
     .filter((pro: any) => {
       const matchesPrice = pro.price >= priceMin && pro.price <= priceMax;
       const matchesRating = pro.rating >= selectedRating;
-      const matchesVerified = verifiedOnly ? pro.verified : true;
+      const matchesVerified = !verifiedOnly || isTrustedProfessional(pro);
 
       const matchesExperience = selectedExperience.length === 0 || selectedExperience.some(exp => {
         if (exp === "Junior (1-2 yrs)") return pro.experience === "Junior";
@@ -144,7 +194,11 @@ const CustomerHome = () => {
         return false;
       });
 
-      const matchesLanguage = selectedLanguages.length === 0 || (Array.isArray(pro.languages) && pro.languages.some((lang: string) => selectedLanguages.includes(lang)));
+      const selectedLangSet = new Set(selectedLanguages.map(normalizeLanguage).filter(Boolean));
+      const proLangs = Array.isArray(pro.languages) ? pro.languages : [];
+      const matchesLanguage =
+        selectedLangSet.size === 0 ||
+        proLangs.some((lang: string) => selectedLangSet.has(normalizeLanguage(lang)));
 
       return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesLanguage;
     })

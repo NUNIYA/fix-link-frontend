@@ -25,7 +25,7 @@ import {
   getCalendar,
   blockDate,
   unblockDate,
-  addPortfolioItem,
+  addPortfolioItems,
   createReview,
   getReviews,
   getProfessionalProfile,
@@ -33,6 +33,7 @@ import {
   getOwnProfessionalDetails,
 } from "../../../api/auth.api";
 import { getServiceCategories, listJobs } from "../../../api/jobs.api";
+import { mapUploadedPortfolioRows, normalizePortfolioFiles } from "../../../utils/portfolio";
 
 const Stars = ({ count, className = "" }: { count: number; className?: string }) => {
   return (
@@ -71,7 +72,8 @@ const ProfessionalProfile = () => {
   // Portfolio Modal State
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
   const [newPortfolioTitle, setNewPortfolioTitle] = useState("");
-  const [newPortfolioFile, setNewPortfolioFile] = useState<File | null>(null);
+  const [newPortfolioFiles, setNewPortfolioFiles] = useState<File[]>([]);
+  const [isUploadingPortfolio, setIsUploadingPortfolio] = useState(false);
 
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
 
@@ -287,42 +289,7 @@ const ProfessionalProfile = () => {
     setProfileLanguages(Array.isArray(rawLanguages) ? rawLanguages : ["Amharic", "English"]);
     
     const rawPortfolio = userData.portfolio_files || userData.portfolio;
-    const portfolioArray = Array.isArray(rawPortfolio) ? rawPortfolio : [];
-    const normalizedPortfolio = portfolioArray.map((item: any) => {
-      if (item.url || item.img) return item;
-      
-      const fileUrl = item.file_url || item.file || "";
-      // Clean up relative URLs to have absolute format or leading slash
-      let cleanUrl = fileUrl;
-      if (cleanUrl && !cleanUrl.startsWith("http") && !cleanUrl.startsWith("/")) {
-        cleanUrl = "/" + cleanUrl;
-      }
-      
-      const isImage = /\.(jpg|jpeg|png|gif|webp|svg)($|\?)/i.test(cleanUrl);
-      
-      // Parse file name from path to use as fallback title since backend DB lacks a title field
-      let fileName = "Portfolio Artifact";
-      try {
-        const decodedUrl = decodeURIComponent(cleanUrl);
-        const parts = decodedUrl.split("/");
-        const lastPart = parts[parts.length - 1];
-        if (lastPart) {
-          fileName = lastPart;
-        }
-      } catch (e) {
-        console.warn("Error parsing filename for portfolio title", e);
-      }
-      
-      return {
-        id: item.id,
-        title: item.title || fileName,
-        type: isImage ? "image" : "file",
-        url: cleanUrl,
-        img: cleanUrl,
-        file: null
-      };
-    });
-    setProfilePortfolio(normalizedPortfolio);
+    setProfilePortfolio(normalizePortfolioFiles(rawPortfolio));
     
     setProfileRating(userObj.average_rating || userObj.rating || 0);
     setProfileReviewsCount(userObj.total_jobs_completed || userObj.reviews_count || 0);
@@ -748,45 +715,48 @@ const ProfessionalProfile = () => {
   };
 
   const handleAddPortfolio = async () => {
-    if (!newPortfolioTitle.trim() && !newPortfolioFile) return;
+    if (!newPortfolioTitle.trim() && newPortfolioFiles.length === 0) return;
 
-    if (newPortfolioFile) {
+    if (newPortfolioFiles.length > 0) {
+      setIsUploadingPortfolio(true);
       try {
-        const uploadedItem = await addPortfolioItem(newPortfolioFile, newPortfolioTitle.trim());
+        const uploadedRows = await addPortfolioItems(
+          newPortfolioFiles,
+          newPortfolioTitle.trim() || undefined,
+        );
+        const filesByName = new Map(newPortfolioFiles.map((f) => [f.name, f]));
+        const newItems = mapUploadedPortfolioRows(uploadedRows, filesByName);
 
-        // Use the returned item from backend
-        const newItem = {
-          id: uploadedItem.id,
-          title: uploadedItem.title || newPortfolioTitle.trim() || newPortfolioFile.name,
-          type: newPortfolioFile.type.includes("image") ? "image" : "file",
-          url: uploadedItem.file_url || uploadedItem.file,
-          img: uploadedItem.file_url || uploadedItem.file,
-          file: newPortfolioFile,
-        };
-
-        setProfilePortfolio([...profilePortfolio, newItem]);
+        setProfilePortfolio((prev) => [...prev, ...newItems]);
         setIsPortfolioModalOpen(false);
         setNewPortfolioTitle("");
-        setNewPortfolioFile(null);
+        setNewPortfolioFiles([]);
+
+        const targetId = (user as any)?.user?.id || user?.id;
+        if (targetId) {
+          clearProfessionalProfileCacheById(String(targetId));
+          setRefreshTrigger((n) => n + 1);
+        }
       } catch (err) {
         console.error("Failed to upload portfolio item:", err);
-        alert("Failed to upload portfolio item. Please try again.");
+        alert("Failed to upload portfolio. Please try again.");
+      } finally {
+        setIsUploadingPortfolio(false);
       }
-    } else {
-      // Just title, no file
-      const newItem = {
-        title: newPortfolioTitle.trim(),
-        type: "file",
-        url: null,
-        img: null,
-        file: null,
-      };
-
-      setProfilePortfolio([...profilePortfolio, newItem]);
-      setIsPortfolioModalOpen(false);
-      setNewPortfolioTitle("");
-      setNewPortfolioFile(null);
+      return;
     }
+
+    const newItem = {
+      title: newPortfolioTitle.trim(),
+      type: "file" as const,
+      url: null,
+      img: null,
+      file: null,
+    };
+    setProfilePortfolio([...profilePortfolio, newItem]);
+    setIsPortfolioModalOpen(false);
+    setNewPortfolioTitle("");
+    setNewPortfolioFiles([]);
   };
 
   // Helper to format image URLs
@@ -1298,7 +1268,7 @@ const ProfessionalProfile = () => {
                       {profilePortfolio.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                           {profilePortfolio.map((item, index) => (
-                            <div key={index} className="group relative rounded-[2rem] overflow-hidden border border-slate-100 dark:border-slate-800/50 bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl transition-all duration-500 hover:shadow-2xl">
+                            <div key={item.id ?? index} className="group relative rounded-[2rem] overflow-hidden border border-slate-100 dark:border-slate-800/50 bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl transition-all duration-500 hover:shadow-2xl">
                               {item.type === "file" || item.img?.endsWith(".pdf") ? (
                                 <div className="aspect-video flex flex-col items-center justify-center p-10 text-center">
                                   <div className="size-20 bg-rose-500/10 rounded-[2rem] mb-4 flex items-center justify-center">
@@ -1314,9 +1284,17 @@ const ProfessionalProfile = () => {
                               )}
                               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-8">
                                 <p className="text-white font-black text-xl transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">{item.title}</p>
-                                <button className="mt-4 text-primary font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-75">
-                                  View Artifact <span className="material-symbols-outlined text-sm">open_in_new</span>
-                                </button>
+                                {(item.url || item.img) && (
+                                  <a
+                                    href={item.url || item.img || "#"}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="mt-4 text-primary font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-75"
+                                  >
+                                    View Artifact <span className="material-symbols-outlined text-sm">open_in_new</span>
+                                  </a>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -1611,17 +1589,24 @@ const ProfessionalProfile = () => {
                   <div className="space-y-2">
                     <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Visual Evidence</label>
                     <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all group overflow-hidden relative">
-                      {newPortfolioFile ? (
-                        <div className="flex flex-col items-center gap-3 text-primary animate-in zoom-in duration-300">
+                      {newPortfolioFiles.length > 0 ? (
+                        <div className="flex flex-col items-center gap-3 text-primary animate-in zoom-in duration-300 px-4">
                           <span className="material-symbols-outlined text-4xl">draft</span>
-                          <span className="text-[11px] font-black uppercase tracking-widest max-w-[200px] text-center truncate px-4">{newPortfolioFile.name}</span>
+                          <span className="text-[11px] font-black uppercase tracking-widest text-center">
+                            {newPortfolioFiles.length} file{newPortfolioFiles.length > 1 ? "s" : ""} selected
+                          </span>
+                          <ul className="text-[10px] font-bold text-slate-500 max-h-16 overflow-y-auto w-full text-center space-y-0.5">
+                            {newPortfolioFiles.map((f) => (
+                              <li key={f.name} className="truncate">{f.name}</li>
+                            ))}
+                          </ul>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center gap-3 text-slate-400 group-hover:text-primary transition-colors">
                           <span className="material-symbols-outlined text-4xl font-light">cloud_upload</span>
                           <div className="text-center">
                              <span className="text-[11px] font-black uppercase tracking-widest block">Upload Media</span>
-                             <span className="text-[9px] font-bold opacity-60">Images or PDF fragments</span>
+                             <span className="text-[9px] font-bold opacity-60">Select multiple images or PDFs</span>
                           </div>
                         </div>
                       )}
@@ -1629,9 +1614,10 @@ const ProfessionalProfile = () => {
                         type="file"
                         className="hidden"
                         accept="image/*,.pdf"
+                        multiple
                         onChange={(e) => {
                           if (e.target.files && e.target.files.length > 0) {
-                            setNewPortfolioFile(e.target.files[0]);
+                            setNewPortfolioFiles(Array.from(e.target.files));
                           }
                         }}
                       />
@@ -1645,7 +1631,7 @@ const ProfessionalProfile = () => {
                   onClick={() => {
                     setIsPortfolioModalOpen(false);
                     setNewPortfolioTitle("");
-                    setNewPortfolioFile(null);
+                    setNewPortfolioFiles([]);
                   }}
                   className="flex-1 py-4 text-[10px] font-black text-slate-500 hover:text-slate-700 dark:hover:text-white uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all"
                 >
@@ -1653,10 +1639,10 @@ const ProfessionalProfile = () => {
                 </button>
                 <button
                   onClick={handleAddPortfolio}
-                  disabled={!newPortfolioTitle.trim() && !newPortfolioFile}
+                  disabled={isUploadingPortfolio || (!newPortfolioTitle.trim() && newPortfolioFiles.length === 0)}
                   className="flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] bg-primary text-white hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
                 >
-                  Register Artifact
+                  {isUploadingPortfolio ? "Uploading…" : "Register Artifact"}
                 </button>
               </div>
             </div>

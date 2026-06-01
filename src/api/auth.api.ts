@@ -652,15 +652,28 @@ export const updateProfessionalDetails = async (data: Record<string, any> | Form
 };
 
 export const addPortfolioItem = async (file: File, title?: string) => {
+  const rows = await addPortfolioItems([file], title);
+  return rows[0];
+};
+
+/** Upload one or many portfolio files (repeat ``file`` in multipart form). */
+export const addPortfolioItems = async (files: File[], title?: string) => {
+  if (!files.length) {
+    throw new Error("At least one file is required.");
+  }
   const fd = new FormData();
-  fd.append("file", file);
+  files.forEach((file) => fd.append("file", file));
   if (title) {
     fd.append("title", title);
   }
-  const response = await api.post('/portfolios/', fd, {
-    headers: { "Content-Type": "multipart/form-data" }
+  // Let axios set multipart boundary (instance default is application/json).
+  const response = await api.post("/portfolios/", fd, {
+    headers: { "Content-Type": undefined },
   });
-  return response.data;
+  const data = response.data;
+  if (Array.isArray(data)) return data;
+  if (data?.items && Array.isArray(data.items)) return data.items;
+  return [data];
 };
 
 export const deletePortfolioItem = async (portfolioId: string) => {
