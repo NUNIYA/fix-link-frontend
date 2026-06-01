@@ -12,6 +12,12 @@ import {
   Loader2, SearchX, ChevronDown,
   Check, Star, Briefcase, MapPin
 } from "lucide-react";
+import {
+  buildUpvoteByUserId,
+  getProfessionalUpvote,
+  isTrustedProfessional,
+  resolveUserId,
+} from "../../../utils/trustedProfessional";
 
 // Normalizes strings for robust matching by removing commas, periods, hyphens, and extra spaces
 const cleanForMatching = (str: string): string => {
@@ -22,6 +28,23 @@ const cleanForMatching = (str: string): string => {
   cleaned = cleaned.replace(/nefas/g, 'nifas');   // standardize nefas to nifas
   cleaned = cleaned.replace(/piasa/g, 'piassa');  // standardize piasa to piassa
   return cleaned;
+};
+
+// Normalize language strings so UI filter matches backend data reliably.
+const normalizeLanguage = (lang: string): string => {
+  const v = String(lang || "")
+    .toLowerCase()
+    .replace(/[\s\-_]+/g, " ")
+    .trim();
+  if (!v) return "";
+
+  // Common variants/synonyms observed in data.
+  if (["oromo", "oromiffa", "oromifa", "afaan oromo", "oromiffaa"].includes(v)) return "oromiffa";
+  if (["amharic", "amhara", "amharigna", "amharinya"].includes(v)) return "amharic";
+  if (["tigrinya", "tigrigna", "tigregna"].includes(v)) return "tigrinya";
+  if (["english", "en", "eng"].includes(v)) return "english";
+
+  return v;
 };
 
 // Client-side mapping of Addis Ababa subcities and neighborhoods to coordinates
@@ -126,24 +149,30 @@ const SearchResults = () => {
                     (u: any) => u.role === 'professional' || u.is_professional || u.user?.role === 'professional'
                 );
 
+                const upvoteByUserId = buildUpvoteByUserId(proList);
+
                 // Fetch detailed profile for all professionals in parallel to get their city, subcity, location, and service category lists
                 const enrichedProList = await Promise.all(
                     proList.map(async (prof: any) => {
+                        const userId = resolveUserId(prof);
+                        const sourceUpvote = upvoteByUserId.get(userId) ?? getProfessionalUpvote(prof);
                         try {
                             const profId = prof.id || prof.user?.id;
                             if (profId) {
                                 const detail = await getProfessionalProfile(String(profId));
-                                return { ...prof, ...detail };
+                                return { ...prof, ...detail, sourceUpvote, upvote: sourceUpvote };
                             }
-                            return prof;
+                            return { ...prof, sourceUpvote, upvote: sourceUpvote };
                         } catch (err) {
-                            return prof;
+                            return { ...prof, sourceUpvote, upvote: sourceUpvote };
                         }
                     })
                 );
 
                 const baseCards = enrichedProList.map((prof: any) => {
                     const ud = prof.user || {};
+                    const userId = resolveUserId(prof);
+                    const upvote = upvoteByUserId.get(userId) ?? getProfessionalUpvote(prof);
                     const yoe = Number(prof.years_of_experience || ud.years_of_experience || 0);
                     
                     const city = prof.city || ud.city || '';
@@ -172,7 +201,8 @@ const SearchResults = () => {
                         rating: prof.average_rating || prof.rating || 0,
                         reviews: prof.total_jobs_completed || prof.reviews_count || 0,
                         price: prof.hourly_rate || 0,
-                        verified: prof.is_verified_professional || false,
+                        upvote,
+                        verified: upvote !== 0,
                         city,
                         subcity,
                         location,
@@ -226,7 +256,7 @@ const SearchResults = () => {
     const filteredProfessionals = professionals.filter((pro: any) => {
         const matchesPrice = pro.price >= priceMin && (priceMax === 10000 || pro.price <= priceMax);
         const matchesRating = pro.rating >= selectedRating;
-        const matchesVerified = verifiedOnly ? pro.verified : true;
+        const matchesVerified = !verifiedOnly || isTrustedProfessional(pro);
 
         const matchesExperience = selectedExperience.length === 0 || selectedExperience.some(exp =>
             (exp === "Junior (1-2 yrs)" && pro.experience === "Junior") ||
@@ -234,7 +264,11 @@ const SearchResults = () => {
             (exp === "Senior (5+ yrs)" && pro.experience === "Senior")
         );
 
-        const matchesLanguage = selectedLanguages.length === 0 || (pro.languages && pro.languages.some((lang: string) => selectedLanguages.includes(lang)));
+        const selectedLangSet = new Set(selectedLanguages.map(normalizeLanguage).filter(Boolean));
+        const proLangs = Array.isArray(pro.languages) ? pro.languages : [];
+        const matchesLanguage =
+          selectedLangSet.size === 0 ||
+          proLangs.some((lang: string) => selectedLangSet.has(normalizeLanguage(lang)));
         
         // Strict location filtering if locationQuery is provided, else fallback to proximity if lat/lng are active
         let matchesLocation = true;
