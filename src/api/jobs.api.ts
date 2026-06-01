@@ -114,12 +114,20 @@ export const getServiceCategories = async () => {
  * Note: Use /users/ instead of /users/professional-detail/ because the latter
  * is restricted to professionals viewing their own profile.
  */
-export const getProfessionals = async (params?: { lat?: number; lng?: number }) => {
-    let endpoint = "/users/";
+export const getProfessionals = async (params?: {
+    lat?: number;
+    lng?: number;
+    category?: string;
+    trusted?: boolean;
+}) => {
+    const qs = new URLSearchParams();
+    qs.set("category", params?.category ?? "professional");
+    if (params?.trusted) qs.set("trusted", "1");
     if (params?.lat !== undefined && params?.lng !== undefined) {
-        endpoint = `/users/?lat=${params.lat}&lng=${params.lng}`;
+        qs.set("lat", String(params.lat));
+        qs.set("lng", String(params.lng));
     }
-    const response = await api.get(endpoint);
+    const response = await api.get(`/users/?${qs.toString()}`);
     return response.data;
 };
 

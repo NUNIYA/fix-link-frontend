@@ -21,14 +21,40 @@ export function parseUpvoteValue(raw: unknown): number {
 export function getProfessionalUpvote(record: any): number {
   if (!record) return 0;
   const nestedUser = record.user || {};
-  const raw =
-    record.sourceUpvote ??
-    record.upvote ??
-    nestedUser.upvote ??
-    record.verified; // legacy fallback only when explicitly boolean true
-  if (raw === true) return 1;
-  if (raw === false) return 0;
-  return parseUpvoteValue(raw);
+  // Use the highest non-zero signal — sourceUpvote may be 0 while profile.user.upvote is 1.
+  const candidates: unknown[] = [
+    record.sourceUpvote,
+    record.upvote,
+    nestedUser.upvote,
+    record.is_verified_professional === true ? 1 : 0,
+    record.verified === true ? 1 : 0,
+  ];
+  let maxUpvote = 0;
+  for (const raw of candidates) {
+    if (raw === true) {
+      maxUpvote = Math.max(maxUpvote, 1);
+      continue;
+    }
+    if (raw === false) continue;
+    maxUpvote = Math.max(maxUpvote, parseUpvoteValue(raw));
+  }
+  return maxUpvote;
+}
+
+/** Merge list + profile payloads and return the trusted upvote value to store on cards. */
+export function resolveTrustedUpvote(
+  listRecord: any,
+  profileRecord: any,
+  upvoteByUserId?: Map<string, number>,
+): number {
+  const userId = resolveUserId(listRecord);
+  const fromMap = userId && upvoteByUserId ? upvoteByUserId.get(userId) : undefined;
+  const merged = profileRecord ? { ...listRecord, ...profileRecord } : listRecord;
+  return Math.max(
+    parseUpvoteValue(fromMap),
+    getProfessionalUpvote(listRecord),
+    getProfessionalUpvote(merged),
+  );
 }
 
 export function isTrustedProfessional(record: any): boolean {

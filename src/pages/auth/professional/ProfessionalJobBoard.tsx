@@ -43,6 +43,18 @@ const cleanDescription = (desc: string) => {
     return desc ? desc.replace(/^Category:\s*[^\n\r]+\s*/i, "").trim() : "";
 };
 
+/** Backend JobImageSerializer returns file_url / file; support legacy field names too. */
+const getJobImageUrl = (img: { file_url?: string; file?: string; image_url?: string; image?: string } | null | undefined): string | null => {
+    if (!img) return null;
+    return img.file_url || img.file || img.image_url || img.image || null;
+};
+
+const getJobThumbnail = (job: { images?: Array<{ file_url?: string; file?: string; image_url?: string; image?: string }> }): string | null => {
+    const images = job?.images;
+    if (!images?.length) return null;
+    return getJobImageUrl(images[0]);
+};
+
 const ProfessionalJobBoard = () => {
     const { t } = useTranslation();
     const { jobs, jobsLoading, refreshJobs } = useData();
@@ -272,7 +284,9 @@ const ProfessionalJobBoard = () => {
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                    {filteredJobs.map((job: any) => (
+                                    {filteredJobs.map((job: any) => {
+                                        const thumbnail = getJobThumbnail(job);
+                                        return (
                                         <div 
                                             key={job.id}
                                             className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[2rem] border border-slate-200/50 dark:border-slate-800/50 p-6 shadow-xl hover:shadow-2xl hover:-translate-y-1 hover:border-primary/30 transition-all duration-300 flex flex-col group cursor-pointer"
@@ -280,9 +294,17 @@ const ProfessionalJobBoard = () => {
                                         >
                                             <div className="flex items-start justify-between mb-4">
                                                 <div className="flex items-center gap-3">
+                                                    {thumbnail ? (
+                                                        <img
+                                                            src={thumbnail}
+                                                            alt=""
+                                                            className="size-12 rounded-2xl object-cover shrink-0 border border-primary/20 group-hover:scale-110 transition-transform"
+                                                        />
+                                                    ) : (
                                                     <div className="size-12 bg-primary/10 rounded-2xl flex items-center justify-center shrink-0 border border-primary/20 group-hover:scale-110 transition-transform">
                                                         <Briefcase size={24} className="text-primary" />
                                                     </div>
+                                                    )}
                                                     <span className="bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border border-slate-200/30 dark:border-slate-700/50">
                                                         {t(`categories.${getJobCategory(job)}`, { defaultValue: getJobCategory(job) })}
                                                     </span>
@@ -306,7 +328,7 @@ const ProfessionalJobBoard = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
+                                    );})}
                                 </div>
                             )}
                         </div>
@@ -348,11 +370,15 @@ const ProfessionalJobBoard = () => {
                                         
                                         {selectedJob.images && selectedJob.images.length > 0 && (
                                             <div className="flex gap-3 overflow-x-auto pb-4 mb-4 custom-scrollbar">
-                                                {selectedJob.images.map((img: any, idx: number) => (
-                                                    <a key={idx} href={img.image || img.image_url} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                                                        <img src={img.image || img.image_url} alt="Job reference" className="h-24 w-24 object-cover rounded-xl border border-slate-200 dark:border-slate-700 hover:opacity-80 transition-opacity" />
+                                                {selectedJob.images.map((img: any, idx: number) => {
+                                                    const url = getJobImageUrl(img);
+                                                    if (!url) return null;
+                                                    return (
+                                                    <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                                                        <img src={url} alt="Job reference" className="h-24 w-24 object-cover rounded-xl border border-slate-200 dark:border-slate-700 hover:opacity-80 transition-opacity" />
                                                     </a>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                         

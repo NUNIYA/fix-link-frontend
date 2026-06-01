@@ -16,6 +16,7 @@ import {
   buildUpvoteByUserId,
   getProfessionalUpvote,
   isTrustedProfessional,
+  resolveTrustedUpvote,
   resolveUserId,
 } from "../../../utils/trustedProfessional";
 
@@ -154,17 +155,18 @@ const SearchResults = () => {
                 // Fetch detailed profile for all professionals in parallel to get their city, subcity, location, and service category lists
                 const enrichedProList = await Promise.all(
                     proList.map(async (prof: any) => {
-                        const userId = resolveUserId(prof);
-                        const sourceUpvote = upvoteByUserId.get(userId) ?? getProfessionalUpvote(prof);
                         try {
                             const profId = prof.id || prof.user?.id;
-                            if (profId) {
-                                const detail = await getProfessionalProfile(String(profId));
-                                return { ...prof, ...detail, sourceUpvote, upvote: sourceUpvote };
+                            if (!profId) {
+                                const upvote = resolveTrustedUpvote(prof, null, upvoteByUserId);
+                                return { ...prof, sourceUpvote: upvote, upvote };
                             }
-                            return { ...prof, sourceUpvote, upvote: sourceUpvote };
-                        } catch (err) {
-                            return { ...prof, sourceUpvote, upvote: sourceUpvote };
+                            const detail = await getProfessionalProfile(String(profId));
+                            const upvote = resolveTrustedUpvote(prof, detail, upvoteByUserId);
+                            return { ...prof, ...detail, sourceUpvote: upvote, upvote };
+                        } catch {
+                            const upvote = resolveTrustedUpvote(prof, null, upvoteByUserId);
+                            return { ...prof, sourceUpvote: upvote, upvote };
                         }
                     })
                 );

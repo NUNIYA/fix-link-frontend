@@ -11,6 +11,7 @@ import {
   buildUpvoteByUserId,
   getProfessionalUpvote,
   isTrustedProfessional,
+  resolveTrustedUpvote,
   resolveUserId,
 } from "../../../utils/trustedProfessional";
 
@@ -41,7 +42,7 @@ const CustomerHome = () => {
   useEffect(() => {
     // 1. Try to load from cache for instant UI.
     // v6 cache stores trusted state from User.upvote.
-    const cached = localStorage.getItem('cached_professionals_v6');
+    const cached = localStorage.getItem('cached_professionals_v7');
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
@@ -91,15 +92,18 @@ const CustomerHome = () => {
         // Enrich with public profile for location/categories.
         const enrichedProList = await Promise.all(
           proList.map(async (prof: any) => {
-            const userId = resolveUserId(prof);
-            const sourceUpvote = upvoteByUserId.get(userId) ?? getProfessionalUpvote(prof);
             try {
               const profId = prof.id || prof.user?.id;
-              if (!profId) return { ...prof, sourceUpvote, upvote: sourceUpvote };
+              if (!profId) {
+                const upvote = resolveTrustedUpvote(prof, null, upvoteByUserId);
+                return { ...prof, sourceUpvote: upvote, upvote };
+              }
               const detail = await getProfessionalProfile(String(profId));
-              return { ...prof, ...detail, sourceUpvote, upvote: sourceUpvote };
+              const upvote = resolveTrustedUpvote(prof, detail, upvoteByUserId);
+              return { ...prof, ...detail, sourceUpvote: upvote, upvote };
             } catch {
-              return { ...prof, sourceUpvote, upvote: sourceUpvote };
+              const upvote = resolveTrustedUpvote(prof, null, upvoteByUserId);
+              return { ...prof, sourceUpvote: upvote, upvote };
             }
           })
         );
@@ -143,7 +147,7 @@ const CustomerHome = () => {
         });
 
         setProfessionals(baseCards);
-        localStorage.setItem('cached_professionals_v6', JSON.stringify(baseCards));
+        localStorage.setItem('cached_professionals_v7', JSON.stringify(baseCards));
         setLoading(false);
       } catch (err) {
         console.error("Failed to fetch dashboard data", err);
