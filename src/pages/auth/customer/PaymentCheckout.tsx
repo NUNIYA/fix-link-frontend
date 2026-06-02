@@ -7,7 +7,7 @@ import { initializePayment, getExistingPayment } from '../../../api/payments.api
 import CustomerNavbar from './components/CustomerNavbar';
 import { getImageUrl, getUserDetails } from '../../../api/auth.api';
 import { 
-  ArrowLeft, CreditCard, Smartphone, 
+  ArrowLeft, CreditCard, 
   Building2, ShieldCheck, Lock, 
   User, Check, Globe, Quote,
   ChevronRight, Info, AlertCircle, Loader2
@@ -252,11 +252,9 @@ const PaymentCheckout = () => {
                                     </div>
                                 </div>
                                 
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
                                     {([
-                                        { id: 'chapa', label: 'Chapa', desc: 'Secure Web', icon: CreditCard },
-                                        { id: 'telebirr', label: 'TeleBirr', desc: 'USSD Push', icon: Smartphone },
-                                        { id: 'cbebirr', label: 'CBE Birr', desc: 'Digital Rail', icon: Building2 }
+                                        { id: 'chapa', label: 'Chapa', desc: 'Secure Web', icon: CreditCard }
                                     ] as const).map(provider => (
                                         <button 
                                             key={provider.id}
